@@ -16,7 +16,7 @@ class DynamoStateStorage {
 
     /**
      * @param {string} [tableName]
-     * @param {AWS.DynamoDB} [dynamoDbService]
+     * @param {AWS.DynamoDB} [dynamoDbService] - preconfigured dynamodb service
      */
     constructor (tableName = 'states', dynamoDbService) {
         const clientConfig = {
@@ -98,20 +98,13 @@ class DynamoStateStorage {
 
     /**
      *
-     * @param {Request} req - chat request
-     * @param {Object} state - conversation state
-     * @returns {Promise<Object>} - conversation state
-     */
-    onAfterStateLoad (req, state) {
-        return Promise.resolve(state);
-    }
-
-    /**
-     *
      * @param {Object} state - conversation state
      * @returns {Promise<Object>}
      */
     saveState (state) {
+        Object.assign(state, {
+            lock: 0
+        });
 
         const stateToSave = this._encodeState(state);
 

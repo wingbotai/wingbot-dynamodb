@@ -13,8 +13,8 @@ class DynamoChatLog {
 
     /**
      * @param {string} [tableName]
-     * @param {AWS.DynamoDB} [dynamoDbService]
-     * @param {{error:Function}} [log]
+     * @param {AWS.DynamoDB} [dynamoDbService] - preconfigured dynamodb service
+     * @param {{error:Function}} [log] - console like logger
      */
     constructor (tableName = 'chatlog', dynamoDbService = null, log = console) {
         const clientConfig = {

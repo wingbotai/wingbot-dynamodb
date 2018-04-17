@@ -14,9 +14,9 @@ const beginning = readme.split(separator)[0];
 const apiDoc = jsdoc2md.renderSync({
     'example-lang': 'javascript',
     files: [
-        'lib/StateStorage.js',
-        'lib/BotTokenStorage.js',
-        'lib/ChatLogStorage.js'
+        'src/StateStorage.js',
+        'src/BotTokenStorage.js',
+        'src/ChatLogStorage.js'
     ]
 });
 
