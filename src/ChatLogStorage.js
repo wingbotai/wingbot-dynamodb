@@ -9,7 +9,7 @@ const AWS = require('aws-sdk');
 /**
  * DynamoDB Chat Log storage
  */
-class DynamoChatLog {
+class ChatLogStorage {
 
     /**
      * @param {string} [tableName]
@@ -99,4 +99,4 @@ class DynamoChatLog {
 
 }
 
-module.exports = DynamoChatLog;
+module.exports = ChatLogStorage;

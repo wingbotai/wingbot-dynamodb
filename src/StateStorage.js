@@ -12,7 +12,7 @@ const ISODatePattern = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?(([+-]\d\d:\d\d)|
 /**
  * Conversation state DynamoDB storage
  */
-class DynamoStateStorage {
+class StateStorage {
 
     /**
      * @param {string} [tableName]
@@ -118,4 +118,4 @@ class DynamoStateStorage {
 
 }
 
-module.exports = DynamoStateStorage;
+module.exports = StateStorage;

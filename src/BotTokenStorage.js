@@ -4,6 +4,7 @@
 'use strict';
 
 const AWS = require('aws-sdk');
+const tokenFactory = require('./tokenFactory');
 
 /**
  * @typedef {Object} Token
@@ -14,7 +15,7 @@ const AWS = require('aws-sdk');
 /**
  * Conversation DynamoDB state storage
  */
-class DynamoBotToken {
+class BotTokenStorage {
 
     /**
      * @param {string} [tableName] - the table name
@@ -73,14 +74,14 @@ class DynamoBotToken {
     /**
      *
      * @param {string} senderId
-     * @param {{(): Promise<string>}} tokenFactory
+     * @param {{(): Promise<string>}} customTokenFactory
      * @returns {Promise<Token|null>}
      */
-    getOrCreateToken (senderId, tokenFactory) {
+    getOrCreateToken (senderId, customTokenFactory = tokenFactory) {
         return this._getToken(senderId)
             .then((token) => {
                 if (!token) {
-                    return this._createAndGetToken(senderId, tokenFactory);
+                    return this._createAndGetToken(senderId, customTokenFactory);
                 }
                 return token;
             });
@@ -106,9 +107,9 @@ class DynamoBotToken {
             });
     }
 
-    _createAndGetToken (senderId, tokenFactory) {
+    _createAndGetToken (senderId, createTokenFn) {
         let tokenObject;
-        return Promise.resolve(tokenFactory())
+        return Promise.resolve(createTokenFn())
             .then((token) => {
                 tokenObject = { senderId, token };
 
@@ -132,4 +133,4 @@ class DynamoBotToken {
 
 }
 
-module.exports = DynamoBotToken;
+module.exports = BotTokenStorage;

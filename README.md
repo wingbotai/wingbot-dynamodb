@@ -4,7 +4,7 @@
 
 All tables uses `${self:custom.prefix}` to be able to use configuration on different bots and environments.
 
-## Conversation States
+## Conversation States and bot configuration
 
 ```yaml
 StatesTable:
@@ -16,6 +16,20 @@ StatesTable:
         AttributeType: S
     KeySchema:
         - AttributeName: senderId
+        KeyType: HASH
+    ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+
+BotConfigTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+    TableName: ${self:custom.prefix}-botconfig
+    AttributeDefinitions:
+        - AttributeName: k
+        AttributeType: S
+    KeySchema:
+        - AttributeName: k
         KeyType: HASH
     ProvisionedThroughput:
         ReadCapacityUnits: 1
@@ -80,14 +94,17 @@ BottokensTable:
 ## Classes
 
 <dl>
-<dt><a href="#DynamoStateStorage">DynamoStateStorage</a></dt>
+<dt><a href="#StateStorage">StateStorage</a></dt>
 <dd><p>Conversation state DynamoDB storage</p>
 </dd>
-<dt><a href="#DynamoBotToken">DynamoBotToken</a></dt>
+<dt><a href="#BotTokenStorage">BotTokenStorage</a></dt>
 <dd><p>Conversation DynamoDB state storage</p>
 </dd>
-<dt><a href="#DynamoChatLog">DynamoChatLog</a></dt>
+<dt><a href="#ChatLogStorage">ChatLogStorage</a></dt>
 <dd><p>DynamoDB Chat Log storage</p>
+</dd>
+<dt><a href="#BotConfigStorage">BotConfigStorage</a></dt>
+<dd><p>Storage for wingbot.ai conversation config</p>
 </dd>
 </dl>
 
@@ -98,32 +115,31 @@ BottokensTable:
 <dd></dd>
 </dl>
 
-<a name="DynamoStateStorage"></a>
+<a name="StateStorage"></a>
 
-## DynamoStateStorage
+## StateStorage
 Conversation state DynamoDB storage
 
 **Kind**: global class
 
-* [DynamoStateStorage](#DynamoStateStorage)
-    * [new DynamoStateStorage([tableName], [dynamoDbService])](#new_DynamoStateStorage_new)
-    * [.getOrCreateAndLock(senderId, [defaultState], [timeout])](#DynamoStateStorage+getOrCreateAndLock) ⇒ <code>Promise.&lt;Object&gt;</code>
-    * [.onAfterStateLoad(req, state)](#DynamoStateStorage+onAfterStateLoad) ⇒ <code>Promise.&lt;Object&gt;</code>
-    * [.saveState(state)](#DynamoStateStorage+saveState) ⇒ <code>Promise.&lt;Object&gt;</code>
+* [StateStorage](#StateStorage)
+    * [new StateStorage([tableName], [dynamoDbService])](#new_StateStorage_new)
+    * [.getOrCreateAndLock(senderId, [defaultState], [timeout])](#StateStorage+getOrCreateAndLock) ⇒ <code>Promise.&lt;Object&gt;</code>
+    * [.saveState(state)](#StateStorage+saveState) ⇒ <code>Promise.&lt;Object&gt;</code>
 
-<a name="new_DynamoStateStorage_new"></a>
+<a name="new_StateStorage_new"></a>
 
-### new DynamoStateStorage([tableName], [dynamoDbService])
+### new StateStorage([tableName], [dynamoDbService])
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
 | [tableName] | <code>string</code> | <code>&quot;states&quot;</code> |  |
 | [dynamoDbService] | <code>AWS.DynamoDB</code> |  | preconfigured dynamodb service |
 
-<a name="DynamoStateStorage+getOrCreateAndLock"></a>
+<a name="StateStorage+getOrCreateAndLock"></a>
 
-### dynamoStateStorage.getOrCreateAndLock(senderId, [defaultState], [timeout]) ⇒ <code>Promise.&lt;Object&gt;</code>
-**Kind**: instance method of [<code>DynamoStateStorage</code>](#DynamoStateStorage)
+### stateStorage.getOrCreateAndLock(senderId, [defaultState], [timeout]) ⇒ <code>Promise.&lt;Object&gt;</code>
+**Kind**: instance method of [<code>StateStorage</code>](#StateStorage)
 **Returns**: <code>Promise.&lt;Object&gt;</code> - - conversation state
 
 | Param | Type | Default | Description |
@@ -132,42 +148,31 @@ Conversation state DynamoDB storage
 | [defaultState] | <code>Object</code> |  | default state of the conversation |
 | [timeout] | <code>number</code> | <code>300</code> | given default state |
 
-<a name="DynamoStateStorage+onAfterStateLoad"></a>
+<a name="StateStorage+saveState"></a>
 
-### dynamoStateStorage.onAfterStateLoad(req, state) ⇒ <code>Promise.&lt;Object&gt;</code>
-**Kind**: instance method of [<code>DynamoStateStorage</code>](#DynamoStateStorage)
-**Returns**: <code>Promise.&lt;Object&gt;</code> - - conversation state
-
-| Param | Type | Description |
-| --- | --- | --- |
-| req | <code>Request</code> | chat request |
-| state | <code>Object</code> | conversation state |
-
-<a name="DynamoStateStorage+saveState"></a>
-
-### dynamoStateStorage.saveState(state) ⇒ <code>Promise.&lt;Object&gt;</code>
-**Kind**: instance method of [<code>DynamoStateStorage</code>](#DynamoStateStorage)
+### stateStorage.saveState(state) ⇒ <code>Promise.&lt;Object&gt;</code>
+**Kind**: instance method of [<code>StateStorage</code>](#StateStorage)
 
 | Param | Type | Description |
 | --- | --- | --- |
 | state | <code>Object</code> | conversation state |
 
-<a name="DynamoBotToken"></a>
+<a name="BotTokenStorage"></a>
 
-## DynamoBotToken
+## BotTokenStorage
 Conversation DynamoDB state storage
 
 **Kind**: global class
 
-* [DynamoBotToken](#DynamoBotToken)
-    * [new DynamoBotToken([tableName], [tokensIndexName], [dynamoDbService])](#new_DynamoBotToken_new)
-    * [.findByToken(token)](#DynamoBotToken+findByToken) ⇒ <code>Promise.&lt;(Token\|null)&gt;</code>
-    * [.getOrCreateToken(senderId, tokenFactory)](#DynamoBotToken+getOrCreateToken) ⇒ <code>Promise.&lt;(Token\|null)&gt;</code>
-    * [._getToken(senderId)](#DynamoBotToken+_getToken) ⇒ <code>Promise.&lt;({senderId:string, token:string}\|null)&gt;</code>
+* [BotTokenStorage](#BotTokenStorage)
+    * [new BotTokenStorage([tableName], [tokensIndexName], [dynamoDbService])](#new_BotTokenStorage_new)
+    * [.findByToken(token)](#BotTokenStorage+findByToken) ⇒ <code>Promise.&lt;(Token\|null)&gt;</code>
+    * [.getOrCreateToken(senderId, customTokenFactory)](#BotTokenStorage+getOrCreateToken) ⇒ <code>Promise.&lt;(Token\|null)&gt;</code>
+    * [._getToken(senderId)](#BotTokenStorage+_getToken) ⇒ <code>Promise.&lt;({senderId:string, token:string}\|null)&gt;</code>
 
-<a name="new_DynamoBotToken_new"></a>
+<a name="new_BotTokenStorage_new"></a>
 
-### new DynamoBotToken([tableName], [tokensIndexName], [dynamoDbService])
+### new BotTokenStorage([tableName], [tokensIndexName], [dynamoDbService])
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -175,48 +180,48 @@ Conversation DynamoDB state storage
 | [tokensIndexName] | <code>string</code> | <code>&quot;token&quot;</code> | index to query table by token |
 | [dynamoDbService] | <code>AWS.DynamoDB</code> | <code></code> | preconfigured dynamodb service |
 
-<a name="DynamoBotToken+findByToken"></a>
+<a name="BotTokenStorage+findByToken"></a>
 
-### dynamoBotToken.findByToken(token) ⇒ <code>Promise.&lt;(Token\|null)&gt;</code>
-**Kind**: instance method of [<code>DynamoBotToken</code>](#DynamoBotToken)
+### botTokenStorage.findByToken(token) ⇒ <code>Promise.&lt;(Token\|null)&gt;</code>
+**Kind**: instance method of [<code>BotTokenStorage</code>](#BotTokenStorage)
 
 | Param | Type |
 | --- | --- |
 | token | <code>string</code> |
 
-<a name="DynamoBotToken+getOrCreateToken"></a>
+<a name="BotTokenStorage+getOrCreateToken"></a>
 
-### dynamoBotToken.getOrCreateToken(senderId, tokenFactory) ⇒ <code>Promise.&lt;(Token\|null)&gt;</code>
-**Kind**: instance method of [<code>DynamoBotToken</code>](#DynamoBotToken)
-
-| Param | Type |
-| --- | --- |
-| senderId | <code>string</code> |
-| tokenFactory | <code>Object</code> |
-
-<a name="DynamoBotToken+_getToken"></a>
-
-### dynamoBotToken._getToken(senderId) ⇒ <code>Promise.&lt;({senderId:string, token:string}\|null)&gt;</code>
-**Kind**: instance method of [<code>DynamoBotToken</code>](#DynamoBotToken)
+### botTokenStorage.getOrCreateToken(senderId, customTokenFactory) ⇒ <code>Promise.&lt;(Token\|null)&gt;</code>
+**Kind**: instance method of [<code>BotTokenStorage</code>](#BotTokenStorage)
 
 | Param | Type |
 | --- | --- |
 | senderId | <code>string</code> |
+| customTokenFactory | <code>Object</code> |
 
-<a name="DynamoChatLog"></a>
+<a name="BotTokenStorage+_getToken"></a>
 
-## DynamoChatLog
+### botTokenStorage._getToken(senderId) ⇒ <code>Promise.&lt;({senderId:string, token:string}\|null)&gt;</code>
+**Kind**: instance method of [<code>BotTokenStorage</code>](#BotTokenStorage)
+
+| Param | Type |
+| --- | --- |
+| senderId | <code>string</code> |
+
+<a name="ChatLogStorage"></a>
+
+## ChatLogStorage
 DynamoDB Chat Log storage
 
 **Kind**: global class
 
-* [DynamoChatLog](#DynamoChatLog)
-    * [new DynamoChatLog([tableName], [dynamoDbService], [log])](#new_DynamoChatLog_new)
-    * [.log(userId, responses, request)](#DynamoChatLog+log)
+* [ChatLogStorage](#ChatLogStorage)
+    * [new ChatLogStorage([tableName], [dynamoDbService], [log])](#new_ChatLogStorage_new)
+    * [.log(userId, responses, request)](#ChatLogStorage+log)
 
-<a name="new_DynamoChatLog_new"></a>
+<a name="new_ChatLogStorage_new"></a>
 
-### new DynamoChatLog([tableName], [dynamoDbService], [log])
+### new ChatLogStorage([tableName], [dynamoDbService], [log])
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -224,12 +229,12 @@ DynamoDB Chat Log storage
 | [dynamoDbService] | <code>AWS.DynamoDB</code> | <code></code> | preconfigured dynamodb service |
 | [log] | <code>Object</code> |  | console like logger |
 
-<a name="DynamoChatLog+log"></a>
+<a name="ChatLogStorage+log"></a>
 
-### dynamoChatLog.log(userId, responses, request)
+### chatLogStorage.log(userId, responses, request)
 Log single event
 
-**Kind**: instance method of [<code>DynamoChatLog</code>](#DynamoChatLog)
+**Kind**: instance method of [<code>ChatLogStorage</code>](#ChatLogStorage)
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -237,6 +242,53 @@ Log single event
 | responses | <code>Array.&lt;Object&gt;</code> | list of sent responses |
 | request | <code>Object</code> | event request |
 
+<a name="BotConfigStorage"></a>
+
+## BotConfigStorage
+Storage for wingbot.ai conversation config
+
+**Kind**: global class
+
+* [BotConfigStorage](#BotConfigStorage)
+    * [new BotConfigStorage([tableName], [dynamoDbService])](#new_BotConfigStorage_new)
+    * [.invalidateConfig()](#BotConfigStorage+invalidateConfig) ⇒ <code>Promise</code>
+    * [.getConfigTimestamp()](#BotConfigStorage+getConfigTimestamp) ⇒ <code>Promise.&lt;number&gt;</code>
+    * [.updateConfig(newConfig)](#BotConfigStorage+updateConfig) ⇒ <code>Promise.&lt;T&gt;</code>
+    * [.getConfig()](#BotConfigStorage+getConfig) ⇒ <code>Promise.&lt;(Object\|null)&gt;</code>
+
+<a name="new_BotConfigStorage_new"></a>
+
+### new BotConfigStorage([tableName], [dynamoDbService])
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| [tableName] | <code>string</code> | <code>&quot;wingbot-config&quot;</code> | the table name |
+| [dynamoDbService] | <code>AWS.DynamoDB</code> | <code></code> | preconfigured dynamodb service |
+
+<a name="BotConfigStorage+invalidateConfig"></a>
+
+### botConfigStorage.invalidateConfig() ⇒ <code>Promise</code>
+Invalidates current configuration
+
+**Kind**: instance method of [<code>BotConfigStorage</code>](#BotConfigStorage)
+<a name="BotConfigStorage+getConfigTimestamp"></a>
+
+### botConfigStorage.getConfigTimestamp() ⇒ <code>Promise.&lt;number&gt;</code>
+**Kind**: instance method of [<code>BotConfigStorage</code>](#BotConfigStorage)
+<a name="BotConfigStorage+updateConfig"></a>
+
+### botConfigStorage.updateConfig(newConfig) ⇒ <code>Promise.&lt;T&gt;</code>
+**Kind**: instance method of [<code>BotConfigStorage</code>](#BotConfigStorage)
+**Template**: T
+
+| Param | Type |
+| --- | --- |
+| newConfig | <code>T</code> |
+
+<a name="BotConfigStorage+getConfig"></a>
+
+### botConfigStorage.getConfig() ⇒ <code>Promise.&lt;(Object\|null)&gt;</code>
+**Kind**: instance method of [<code>BotConfigStorage</code>](#BotConfigStorage)
 <a name="Token"></a>
 
 ## Token : <code>Object</code>

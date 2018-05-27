@@ -1,6 +1,6 @@
 {
   "name": "wingbot-dynamodb",
-  "version": "1.0.0-alpha.1",
+  "version": "1.0.0",
   "description": "DynamoDB storage for wingbot",
   "main": "src/main.js",
   "scripts": {
