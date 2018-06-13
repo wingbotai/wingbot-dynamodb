@@ -16,6 +16,7 @@ const INDEX_NAME = 'token';
 
 const SENDER_ID = 'hello';
 const SENDER_ID2 = 'hello2';
+const PAGE_ID = 'page';
 
 
 describe('<BotTokenStorage>', function () {
@@ -31,12 +32,20 @@ describe('<BotTokenStorage>', function () {
                 {
                     AttributeName: 'token',
                     AttributeType: 'S'
+                },
+                {
+                    AttributeName: 'pageId',
+                    AttributeType: 'S'
                 }
             ],
             KeySchema: [
                 {
                     AttributeName: 'senderId',
                     KeyType: 'HASH'
+                },
+                {
+                    AttributeName: 'pageId',
+                    KeyType: 'RANGE'
                 }
             ],
             GlobalSecondaryIndexes: [
@@ -73,18 +82,20 @@ describe('<BotTokenStorage>', function () {
         it('creates token', async () => {
             const bts = new BotTokenStorage(TABLE_NAME, INDEX_NAME, db);
 
-            let token = await bts.getOrCreateToken(SENDER_ID, () => Promise.resolve('randomToken'));
+            let token = await bts.getOrCreateToken(SENDER_ID, PAGE_ID, () => Promise.resolve('randomToken'));
 
             assert.deepStrictEqual(token, {
                 token: 'randomToken',
-                senderId: SENDER_ID
+                senderId: SENDER_ID,
+                pageId: PAGE_ID
             });
 
-            token = await bts.getOrCreateToken(SENDER_ID, () => Promise.resolve('nothing'));
+            token = await bts.getOrCreateToken(SENDER_ID, PAGE_ID, () => Promise.resolve('nothing'));
 
             assert.deepStrictEqual(token, {
                 token: 'randomToken',
-                senderId: SENDER_ID
+                senderId: SENDER_ID,
+                pageId: PAGE_ID
             });
         });
 
@@ -92,8 +103,8 @@ describe('<BotTokenStorage>', function () {
             const bts = new BotTokenStorage(TABLE_NAME, INDEX_NAME, db);
 
             const tokens = await Promise.all([
-                bts.getOrCreateToken('a', () => Promise.resolve('fake')),
-                bts.getOrCreateToken('a', () => Promise.resolve('another'))
+                bts.getOrCreateToken('a', PAGE_ID, () => Promise.resolve('fake')),
+                bts.getOrCreateToken('a', PAGE_ID, () => Promise.resolve('another'))
             ]);
 
             assert.ok(tokens.every(t => t.senderId === 'a'
@@ -111,13 +122,14 @@ describe('<BotTokenStorage>', function () {
 
             assert.strictEqual(token, null);
 
-            await bts.getOrCreateToken(SENDER_ID2, () => Promise.resolve('lookForToken'));
+            await bts.getOrCreateToken(SENDER_ID2, PAGE_ID, () => Promise.resolve('lookForToken'));
 
             token = await bts.findByToken('lookForToken');
 
             assert.deepStrictEqual(token, {
                 token: 'lookForToken',
-                senderId: SENDER_ID2
+                senderId: SENDER_ID2,
+                pageId: PAGE_ID
             });
         });
 

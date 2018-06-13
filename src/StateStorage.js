@@ -8,6 +8,12 @@ const deepMap = require('./deepMap');
 
 const ISODatePattern = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?(([+-]\d\d:\d\d)|Z)?$/i;
 
+/**
+ * @typedef {Object} State
+ * @prop {string} senderId
+ * @prop {string} pageId
+ * @prop {Object} state
+ */
 
 /**
  * Conversation state DynamoDB storage
@@ -36,17 +42,42 @@ class StateStorage {
 
     /**
      *
-     * @param {any} senderId - sender identifier
+     * @param {string} senderId
+     * @param {string} pageId
+     * @returns {Promise<State|null>}
+     */
+    getState (senderId, pageId) {
+        return this._documentClient.get({
+            TableName: this._tableName,
+            Key: { pageId, senderId }
+        })
+            .promise()
+            .then((data) => {
+                if (!data.Item) {
+                    return null;
+                }
+                const ret = this._decodeState(data.Item);
+                if (typeof ret.state !== 'object') {
+                    Object.assign(ret, { state: {} });
+                }
+                return ret;
+            });
+    }
+
+    /**
+     *
+     * @param {string} senderId - sender identifier
+     * @param {string} pageId - page/channel identifier
      * @param {Object} [defaultState] - default state of the conversation
      * @param {number} [timeout=300] - given default state
      * @returns {Promise<Object>} - conversation state
      */
-    getOrCreateAndLock (senderId, defaultState = {}, timeout = 300) {
+    getOrCreateAndLock (senderId, pageId, defaultState = {}, timeout = 300) {
         const now = Date.now();
 
         return this._documentClient.update({
             TableName: this._tableName,
-            Key: { senderId },
+            Key: { pageId, senderId },
             ExpressionAttributeNames: {
                 '#LOCK': 'lock'
             },

@@ -12,28 +12,32 @@ StatesTable:
     Properties:
     TableName: ${self:custom.prefix}-states
     AttributeDefinitions:
-        - AttributeName: senderId
+      - AttributeName: senderId
+        AttributeType: S
+      - AttributeName: pageId
         AttributeType: S
     KeySchema:
-        - AttributeName: senderId
+      - AttributeName: senderId
         KeyType: HASH
+      - AttributeName: pageId
+        KeyType: RANGE
     ProvisionedThroughput:
-        ReadCapacityUnits: 1
-        WriteCapacityUnits: 1
+      ReadCapacityUnits: 1
+      WriteCapacityUnits: 1
 
 BotConfigTable:
     Type: AWS::DynamoDB::Table
     Properties:
     TableName: ${self:custom.prefix}-botconfig
     AttributeDefinitions:
-        - AttributeName: k
+      - AttributeName: k
         AttributeType: S
     KeySchema:
-        - AttributeName: k
+      - AttributeName: k
         KeyType: HASH
     ProvisionedThroughput:
-        ReadCapacityUnits: 1
-        WriteCapacityUnits: 1
+      ReadCapacityUnits: 1
+      WriteCapacityUnits: 1
 ```
 
 ## Chat Logs (optional)
@@ -44,18 +48,18 @@ ChatlogTable:
     Properties:
     TableName: ${self:custom.prefix}-chatlog
     AttributeDefinitions:
-        - AttributeName: userId
+      - AttributeName: userId
         AttributeType: S
-        - AttributeName: time
+      - AttributeName: time
         AttributeType: S
     KeySchema:
-        - AttributeName: userId
+      - AttributeName: userId
         KeyType: HASH
-        - AttributeName: time
+      - AttributeName: time
         KeyType: RANGE
     ProvisionedThroughput:
-        ReadCapacityUnits: 1
-        WriteCapacityUnits: 1
+      ReadCapacityUnits: 1
+      WriteCapacityUnits: 1
 ```
 
 ## Chatbot tokens (optional)
@@ -66,13 +70,17 @@ BottokensTable:
     Properties:
     TableName: ${self:custom.prefix}-bottokens
     AttributeDefinitions:
-        - AttributeName: senderId
+      - AttributeName: senderId
         AttributeType: S
-        - AttributeName: token
+      - AttributeName: token
+        AttributeType: S
+      - AttributeName: pageId
         AttributeType: S
     KeySchema:
-        - AttributeName: senderId
+      - AttributeName: senderId
         KeyType: HASH
+      - AttributeName: pageId
+        KeyType: RANGE
     GlobalSecondaryIndexes:
         - IndexName: token
         KeySchema:
@@ -111,6 +119,8 @@ BottokensTable:
 ## Typedefs
 
 <dl>
+<dt><a href="#State">State</a> : <code>Object</code></dt>
+<dd></dd>
 <dt><a href="#Token">Token</a> : <code>Object</code></dt>
 <dd></dd>
 </dl>
@@ -120,11 +130,12 @@ BottokensTable:
 ## StateStorage
 Conversation state DynamoDB storage
 
-**Kind**: global class
+**Kind**: global class  
 
 * [StateStorage](#StateStorage)
     * [new StateStorage([tableName], [dynamoDbService])](#new_StateStorage_new)
-    * [.getOrCreateAndLock(senderId, [defaultState], [timeout])](#StateStorage+getOrCreateAndLock) ⇒ <code>Promise.&lt;Object&gt;</code>
+    * [.getState(senderId, pageId)](#StateStorage+getState) ⇒ <code>Promise.&lt;(State\|null)&gt;</code>
+    * [.getOrCreateAndLock(senderId, pageId, [defaultState], [timeout])](#StateStorage+getOrCreateAndLock) ⇒ <code>Promise.&lt;Object&gt;</code>
     * [.saveState(state)](#StateStorage+saveState) ⇒ <code>Promise.&lt;Object&gt;</code>
 
 <a name="new_StateStorage_new"></a>
@@ -136,22 +147,33 @@ Conversation state DynamoDB storage
 | [tableName] | <code>string</code> | <code>&quot;states&quot;</code> |  |
 | [dynamoDbService] | <code>AWS.DynamoDB</code> |  | preconfigured dynamodb service |
 
+<a name="StateStorage+getState"></a>
+
+### stateStorage.getState(senderId, pageId) ⇒ <code>Promise.&lt;(State\|null)&gt;</code>
+**Kind**: instance method of [<code>StateStorage</code>](#StateStorage)  
+
+| Param | Type |
+| --- | --- |
+| senderId | <code>string</code> | 
+| pageId | <code>string</code> | 
+
 <a name="StateStorage+getOrCreateAndLock"></a>
 
-### stateStorage.getOrCreateAndLock(senderId, [defaultState], [timeout]) ⇒ <code>Promise.&lt;Object&gt;</code>
-**Kind**: instance method of [<code>StateStorage</code>](#StateStorage)
-**Returns**: <code>Promise.&lt;Object&gt;</code> - - conversation state
+### stateStorage.getOrCreateAndLock(senderId, pageId, [defaultState], [timeout]) ⇒ <code>Promise.&lt;Object&gt;</code>
+**Kind**: instance method of [<code>StateStorage</code>](#StateStorage)  
+**Returns**: <code>Promise.&lt;Object&gt;</code> - - conversation state  
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
-| senderId | <code>any</code> |  | sender identifier |
+| senderId | <code>string</code> |  | sender identifier |
+| pageId | <code>string</code> |  | page/channel identifier |
 | [defaultState] | <code>Object</code> |  | default state of the conversation |
 | [timeout] | <code>number</code> | <code>300</code> | given default state |
 
 <a name="StateStorage+saveState"></a>
 
 ### stateStorage.saveState(state) ⇒ <code>Promise.&lt;Object&gt;</code>
-**Kind**: instance method of [<code>StateStorage</code>](#StateStorage)
+**Kind**: instance method of [<code>StateStorage</code>](#StateStorage)  
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -162,13 +184,13 @@ Conversation state DynamoDB storage
 ## BotTokenStorage
 Conversation DynamoDB state storage
 
-**Kind**: global class
+**Kind**: global class  
 
 * [BotTokenStorage](#BotTokenStorage)
     * [new BotTokenStorage([tableName], [tokensIndexName], [dynamoDbService])](#new_BotTokenStorage_new)
     * [.findByToken(token)](#BotTokenStorage+findByToken) ⇒ <code>Promise.&lt;(Token\|null)&gt;</code>
-    * [.getOrCreateToken(senderId, customTokenFactory)](#BotTokenStorage+getOrCreateToken) ⇒ <code>Promise.&lt;(Token\|null)&gt;</code>
-    * [._getToken(senderId)](#BotTokenStorage+_getToken) ⇒ <code>Promise.&lt;({senderId:string, token:string}\|null)&gt;</code>
+    * [.getOrCreateToken(senderId, pageId, customTokenFactory)](#BotTokenStorage+getOrCreateToken) ⇒ <code>Promise.&lt;(Token\|null)&gt;</code>
+    * [._getToken(senderId, pageId)](#BotTokenStorage+_getToken) ⇒ <code>Promise.&lt;({senderId:string, token:string}\|null)&gt;</code>
 
 <a name="new_BotTokenStorage_new"></a>
 
@@ -183,37 +205,39 @@ Conversation DynamoDB state storage
 <a name="BotTokenStorage+findByToken"></a>
 
 ### botTokenStorage.findByToken(token) ⇒ <code>Promise.&lt;(Token\|null)&gt;</code>
-**Kind**: instance method of [<code>BotTokenStorage</code>](#BotTokenStorage)
+**Kind**: instance method of [<code>BotTokenStorage</code>](#BotTokenStorage)  
 
 | Param | Type |
 | --- | --- |
-| token | <code>string</code> |
+| token | <code>string</code> | 
 
 <a name="BotTokenStorage+getOrCreateToken"></a>
 
-### botTokenStorage.getOrCreateToken(senderId, customTokenFactory) ⇒ <code>Promise.&lt;(Token\|null)&gt;</code>
-**Kind**: instance method of [<code>BotTokenStorage</code>](#BotTokenStorage)
+### botTokenStorage.getOrCreateToken(senderId, pageId, customTokenFactory) ⇒ <code>Promise.&lt;(Token\|null)&gt;</code>
+**Kind**: instance method of [<code>BotTokenStorage</code>](#BotTokenStorage)  
 
 | Param | Type |
 | --- | --- |
-| senderId | <code>string</code> |
-| customTokenFactory | <code>Object</code> |
+| senderId | <code>string</code> | 
+| pageId | <code>string</code> | 
+| customTokenFactory | <code>Object</code> | 
 
 <a name="BotTokenStorage+_getToken"></a>
 
-### botTokenStorage._getToken(senderId) ⇒ <code>Promise.&lt;({senderId:string, token:string}\|null)&gt;</code>
-**Kind**: instance method of [<code>BotTokenStorage</code>](#BotTokenStorage)
+### botTokenStorage._getToken(senderId, pageId) ⇒ <code>Promise.&lt;({senderId:string, token:string}\|null)&gt;</code>
+**Kind**: instance method of [<code>BotTokenStorage</code>](#BotTokenStorage)  
 
 | Param | Type |
 | --- | --- |
-| senderId | <code>string</code> |
+| senderId | <code>string</code> | 
+| pageId | <code>string</code> | 
 
 <a name="ChatLogStorage"></a>
 
 ## ChatLogStorage
 DynamoDB Chat Log storage
 
-**Kind**: global class
+**Kind**: global class  
 
 * [ChatLogStorage](#ChatLogStorage)
     * [new ChatLogStorage([tableName], [dynamoDbService], [log])](#new_ChatLogStorage_new)
@@ -234,7 +258,7 @@ DynamoDB Chat Log storage
 ### chatLogStorage.log(userId, responses, request)
 Log single event
 
-**Kind**: instance method of [<code>ChatLogStorage</code>](#ChatLogStorage)
+**Kind**: instance method of [<code>ChatLogStorage</code>](#ChatLogStorage)  
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -247,7 +271,7 @@ Log single event
 ## BotConfigStorage
 Storage for wingbot.ai conversation config
 
-**Kind**: global class
+**Kind**: global class  
 
 * [BotConfigStorage](#BotConfigStorage)
     * [new BotConfigStorage([tableName], [dynamoDbService])](#new_BotConfigStorage_new)
@@ -270,33 +294,46 @@ Storage for wingbot.ai conversation config
 ### botConfigStorage.invalidateConfig() ⇒ <code>Promise</code>
 Invalidates current configuration
 
-**Kind**: instance method of [<code>BotConfigStorage</code>](#BotConfigStorage)
+**Kind**: instance method of [<code>BotConfigStorage</code>](#BotConfigStorage)  
 <a name="BotConfigStorage+getConfigTimestamp"></a>
 
 ### botConfigStorage.getConfigTimestamp() ⇒ <code>Promise.&lt;number&gt;</code>
-**Kind**: instance method of [<code>BotConfigStorage</code>](#BotConfigStorage)
+**Kind**: instance method of [<code>BotConfigStorage</code>](#BotConfigStorage)  
 <a name="BotConfigStorage+updateConfig"></a>
 
 ### botConfigStorage.updateConfig(newConfig) ⇒ <code>Promise.&lt;T&gt;</code>
-**Kind**: instance method of [<code>BotConfigStorage</code>](#BotConfigStorage)
-**Template**: T
+**Kind**: instance method of [<code>BotConfigStorage</code>](#BotConfigStorage)  
+**Template**: T  
 
 | Param | Type |
 | --- | --- |
-| newConfig | <code>T</code> |
+| newConfig | <code>T</code> | 
 
 <a name="BotConfigStorage+getConfig"></a>
 
 ### botConfigStorage.getConfig() ⇒ <code>Promise.&lt;(Object\|null)&gt;</code>
-**Kind**: instance method of [<code>BotConfigStorage</code>](#BotConfigStorage)
-<a name="Token"></a>
+**Kind**: instance method of [<code>BotConfigStorage</code>](#BotConfigStorage)  
+<a name="State"></a>
 
-## Token : <code>Object</code>
-**Kind**: global typedef
+## State : <code>Object</code>
+**Kind**: global typedef  
 **Properties**
 
 | Name | Type |
 | --- | --- |
-| senderId | <code>string</code> |
-| token | <code>string</code> |
+| senderId | <code>string</code> | 
+| pageId | <code>string</code> | 
+| state | <code>Object</code> | 
+
+<a name="Token"></a>
+
+## Token : <code>Object</code>
+**Kind**: global typedef  
+**Properties**
+
+| Name | Type |
+| --- | --- |
+| senderId | <code>string</code> | 
+| pageId | <code>string</code> | 
+| token | <code>string</code> | 
 

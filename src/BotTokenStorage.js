@@ -9,6 +9,7 @@ const tokenFactory = require('./tokenFactory');
 /**
  * @typedef {Object} Token
  * @prop {string} senderId
+ * @prop {string} pageId
  * @prop {string} token
  */
 
@@ -66,22 +67,23 @@ class BotTokenStorage {
                 if (data.Items.length === 0) {
                     return null;
                 }
-                const { senderId } = data.Items[0];
-                return { senderId, token };
+                const { senderId, pageId } = data.Items[0];
+                return { senderId, token, pageId };
             });
     }
 
     /**
      *
      * @param {string} senderId
+     * @param {string} pageId
      * @param {{(): Promise<string>}} customTokenFactory
      * @returns {Promise<Token|null>}
      */
-    getOrCreateToken (senderId, customTokenFactory = tokenFactory) {
-        return this._getToken(senderId)
+    getOrCreateToken (senderId, pageId, customTokenFactory = tokenFactory) {
+        return this._getToken(senderId, pageId)
             .then((token) => {
                 if (!token) {
-                    return this._createAndGetToken(senderId, customTokenFactory);
+                    return this._createAndGetToken(senderId, pageId, customTokenFactory);
                 }
                 return token;
             });
@@ -90,12 +92,13 @@ class BotTokenStorage {
     /**
      *
      * @param {string} senderId
+     * @param {string} pageId
      * @returns {Promise<{senderId:string,token:string}|null>}
      */
-    _getToken (senderId) {
+    _getToken (senderId, pageId) {
         return this._documentClient.get({
             TableName: this._tableName,
-            Key: { senderId }
+            Key: { senderId, pageId }
         })
             .promise()
             .then((data) => {
@@ -103,15 +106,15 @@ class BotTokenStorage {
                     return null;
                 }
                 const { senderId: fetchedSenderId, token } = data.Item;
-                return { senderId: fetchedSenderId, token };
+                return { senderId: fetchedSenderId, token, pageId };
             });
     }
 
-    _createAndGetToken (senderId, createTokenFn) {
+    _createAndGetToken (senderId, pageId, createTokenFn) {
         let tokenObject;
         return Promise.resolve(createTokenFn())
             .then((token) => {
-                tokenObject = { senderId, token };
+                tokenObject = { senderId, token, pageId };
 
                 return this._documentClient.put({
                     TableName: this._tableName,
@@ -121,7 +124,7 @@ class BotTokenStorage {
             })
             .then(
                 () => tokenObject,
-                () => this._getToken(senderId) // probably collision, try read it
+                () => this._getToken(senderId, pageId) // probably collision, try read it
                     .then((token) => {
                         if (!token) {
                             throw new Error('Cant create token');
