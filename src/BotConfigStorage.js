@@ -4,6 +4,7 @@
 'use strict';
 
 const AWS = require('aws-sdk');
+const { apiAuthorizer } = require('wingbot');
 
 const CONFIG_ID = 'config';
 
@@ -32,6 +33,28 @@ class BotConfigStorage {
         this._documentClient = new AWS.DynamoDB.DocumentClient(clientConfig);
 
         this._tableName = tableName;
+    }
+
+
+    /**
+     * Returns botUpdate API for wingbot
+     *
+     * @param {Function} [onUpdate] - async update handler function
+     * @param {Function|string[]} [acl] - acl configuration
+     * @returns {{updateBot:Function}}
+     */
+    api (onUpdate = () => Promise.resolve(), acl) {
+        const storage = this;
+        return {
+            async updateBot (args, ctx) {
+                if (!apiAuthorizer(args, ctx, acl)) {
+                    return null;
+                }
+                await storage.invalidateConfig();
+                await onUpdate();
+                return true;
+            }
+        };
     }
 
     /**

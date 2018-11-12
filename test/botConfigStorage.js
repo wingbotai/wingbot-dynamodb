@@ -42,6 +42,22 @@ describe('<BotConfigStorage>', function () {
         await dropTable(TABLE_NAME);
     });
 
+    it('has api', async () => {
+        const botConfigStorage = new BotConfigStorage(TABLE_NAME, db);
+
+        const api = botConfigStorage.api();
+
+        assert.equal(typeof api.updateBot, 'function');
+
+        const res = await api.updateBot({}, { groups: ['a'], token: { groups: [{ group: 'a' }] } });
+
+        assert.strictEqual(res, true);
+
+        const res2 = await api.updateBot({}, { groups: ['b'], token: { groups: [{ group: 'a' }] } });
+
+        assert.strictEqual(res2, null);
+    });
+
     it('should be able to store and fetch, invalidate and update config under same timestamp', async () => {
         const cfgObj = { blocks: 123 };
 

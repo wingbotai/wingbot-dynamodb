@@ -151,7 +151,7 @@ AttachmentsTable:
 ## StateStorage
 Conversation state DynamoDB storage
 
-**Kind**: global class
+**Kind**: global class  
 
 * [StateStorage](#StateStorage)
     * [new StateStorage([tableName], [dynamoDbService])](#new_StateStorage_new)
@@ -171,18 +171,18 @@ Conversation state DynamoDB storage
 <a name="StateStorage+getState"></a>
 
 ### stateStorage.getState(senderId, pageId) ⇒ <code>Promise.&lt;(State\|null)&gt;</code>
-**Kind**: instance method of [<code>StateStorage</code>](#StateStorage)
+**Kind**: instance method of [<code>StateStorage</code>](#StateStorage)  
 
 | Param | Type |
 | --- | --- |
-| senderId | <code>string</code> |
-| pageId | <code>string</code> |
+| senderId | <code>string</code> | 
+| pageId | <code>string</code> | 
 
 <a name="StateStorage+getOrCreateAndLock"></a>
 
 ### stateStorage.getOrCreateAndLock(senderId, pageId, [defaultState], [timeout]) ⇒ <code>Promise.&lt;Object&gt;</code>
-**Kind**: instance method of [<code>StateStorage</code>](#StateStorage)
-**Returns**: <code>Promise.&lt;Object&gt;</code> - - conversation state
+**Kind**: instance method of [<code>StateStorage</code>](#StateStorage)  
+**Returns**: <code>Promise.&lt;Object&gt;</code> - - conversation state  
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -194,7 +194,7 @@ Conversation state DynamoDB storage
 <a name="StateStorage+saveState"></a>
 
 ### stateStorage.saveState(state) ⇒ <code>Promise.&lt;Object&gt;</code>
-**Kind**: instance method of [<code>StateStorage</code>](#StateStorage)
+**Kind**: instance method of [<code>StateStorage</code>](#StateStorage)  
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -205,7 +205,7 @@ Conversation state DynamoDB storage
 ## BotTokenStorage
 Conversation DynamoDB state storage
 
-**Kind**: global class
+**Kind**: global class  
 
 * [BotTokenStorage](#BotTokenStorage)
     * [new BotTokenStorage([tableName], [tokensIndexName], [dynamoDbService])](#new_BotTokenStorage_new)
@@ -226,39 +226,39 @@ Conversation DynamoDB state storage
 <a name="BotTokenStorage+findByToken"></a>
 
 ### botTokenStorage.findByToken(token) ⇒ <code>Promise.&lt;(Token\|null)&gt;</code>
-**Kind**: instance method of [<code>BotTokenStorage</code>](#BotTokenStorage)
+**Kind**: instance method of [<code>BotTokenStorage</code>](#BotTokenStorage)  
 
 | Param | Type |
 | --- | --- |
-| token | <code>string</code> |
+| token | <code>string</code> | 
 
 <a name="BotTokenStorage+getOrCreateToken"></a>
 
 ### botTokenStorage.getOrCreateToken(senderId, pageId, customTokenFactory) ⇒ <code>Promise.&lt;(Token\|null)&gt;</code>
-**Kind**: instance method of [<code>BotTokenStorage</code>](#BotTokenStorage)
+**Kind**: instance method of [<code>BotTokenStorage</code>](#BotTokenStorage)  
 
 | Param | Type |
 | --- | --- |
-| senderId | <code>string</code> |
-| pageId | <code>string</code> |
-| customTokenFactory | <code>Object</code> |
+| senderId | <code>string</code> | 
+| pageId | <code>string</code> | 
+| customTokenFactory | <code>Object</code> | 
 
 <a name="BotTokenStorage+_getToken"></a>
 
 ### botTokenStorage._getToken(senderId, pageId) ⇒ <code>Promise.&lt;({senderId:string, token:string}\|null)&gt;</code>
-**Kind**: instance method of [<code>BotTokenStorage</code>](#BotTokenStorage)
+**Kind**: instance method of [<code>BotTokenStorage</code>](#BotTokenStorage)  
 
 | Param | Type |
 | --- | --- |
-| senderId | <code>string</code> |
-| pageId | <code>string</code> |
+| senderId | <code>string</code> | 
+| pageId | <code>string</code> | 
 
 <a name="ChatLogStorage"></a>
 
 ## ChatLogStorage
 DynamoDB Chat Log storage
 
-**Kind**: global class
+**Kind**: global class  
 
 * [ChatLogStorage](#ChatLogStorage)
     * [new ChatLogStorage([tableName], [dynamoDbService], [log])](#new_ChatLogStorage_new)
@@ -279,7 +279,7 @@ DynamoDB Chat Log storage
 ### chatLogStorage.log(userId, responses, request)
 Log single event
 
-**Kind**: instance method of [<code>ChatLogStorage</code>](#ChatLogStorage)
+**Kind**: instance method of [<code>ChatLogStorage</code>](#ChatLogStorage)  
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -292,10 +292,11 @@ Log single event
 ## BotConfigStorage
 Storage for wingbot.ai conversation config
 
-**Kind**: global class
+**Kind**: global class  
 
 * [BotConfigStorage](#BotConfigStorage)
     * [new BotConfigStorage([tableName], [dynamoDbService])](#new_BotConfigStorage_new)
+    * [.api([onUpdate], [acl])](#BotConfigStorage+api) ⇒ <code>Object</code>
     * [.invalidateConfig()](#BotConfigStorage+invalidateConfig) ⇒ <code>Promise</code>
     * [.getConfigTimestamp()](#BotConfigStorage+getConfigTimestamp) ⇒ <code>Promise.&lt;number&gt;</code>
     * [.updateConfig(newConfig)](#BotConfigStorage+updateConfig) ⇒ <code>Promise.&lt;T&gt;</code>
@@ -310,36 +311,48 @@ Storage for wingbot.ai conversation config
 | [tableName] | <code>string</code> | <code>&quot;wingbot-config&quot;</code> | the table name |
 | [dynamoDbService] | <code>AWS.DynamoDB</code> | <code></code> | preconfigured dynamodb service |
 
+<a name="BotConfigStorage+api"></a>
+
+### botConfigStorage.api([onUpdate], [acl]) ⇒ <code>Object</code>
+Returns botUpdate API for wingbot
+
+**Kind**: instance method of [<code>BotConfigStorage</code>](#BotConfigStorage)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| [onUpdate] | <code>function</code> | async update handler function |
+| [acl] | <code>function</code> \| <code>Array.&lt;string&gt;</code> | acl configuration |
+
 <a name="BotConfigStorage+invalidateConfig"></a>
 
 ### botConfigStorage.invalidateConfig() ⇒ <code>Promise</code>
 Invalidates current configuration
 
-**Kind**: instance method of [<code>BotConfigStorage</code>](#BotConfigStorage)
+**Kind**: instance method of [<code>BotConfigStorage</code>](#BotConfigStorage)  
 <a name="BotConfigStorage+getConfigTimestamp"></a>
 
 ### botConfigStorage.getConfigTimestamp() ⇒ <code>Promise.&lt;number&gt;</code>
-**Kind**: instance method of [<code>BotConfigStorage</code>](#BotConfigStorage)
+**Kind**: instance method of [<code>BotConfigStorage</code>](#BotConfigStorage)  
 <a name="BotConfigStorage+updateConfig"></a>
 
 ### botConfigStorage.updateConfig(newConfig) ⇒ <code>Promise.&lt;T&gt;</code>
-**Kind**: instance method of [<code>BotConfigStorage</code>](#BotConfigStorage)
-**Template**: T
+**Kind**: instance method of [<code>BotConfigStorage</code>](#BotConfigStorage)  
+**Template**: T  
 
 | Param | Type |
 | --- | --- |
-| newConfig | <code>T</code> |
+| newConfig | <code>T</code> | 
 
 <a name="BotConfigStorage+getConfig"></a>
 
 ### botConfigStorage.getConfig() ⇒ <code>Promise.&lt;(Object\|null)&gt;</code>
-**Kind**: instance method of [<code>BotConfigStorage</code>](#BotConfigStorage)
+**Kind**: instance method of [<code>BotConfigStorage</code>](#BotConfigStorage)  
 <a name="AttachmentCache"></a>
 
 ## AttachmentCache
 Storage for Facebook attachment ids
 
-**Kind**: global class
+**Kind**: global class  
 
 * [AttachmentCache](#AttachmentCache)
     * [new AttachmentCache([tableName], [dynamoDbService])](#new_AttachmentCache_new)
@@ -358,43 +371,43 @@ Storage for Facebook attachment ids
 <a name="AttachmentCache+findAttachmentByUrl"></a>
 
 ### attachmentCache.findAttachmentByUrl(url) ⇒ <code>Promise.&lt;(number\|null)&gt;</code>
-**Kind**: instance method of [<code>AttachmentCache</code>](#AttachmentCache)
+**Kind**: instance method of [<code>AttachmentCache</code>](#AttachmentCache)  
 
 | Param | Type |
 | --- | --- |
-| url | <code>string</code> |
+| url | <code>string</code> | 
 
 <a name="AttachmentCache+saveAttachmentId"></a>
 
 ### attachmentCache.saveAttachmentId(url, attachmentId) ⇒ <code>Promise</code>
-**Kind**: instance method of [<code>AttachmentCache</code>](#AttachmentCache)
+**Kind**: instance method of [<code>AttachmentCache</code>](#AttachmentCache)  
 
 | Param | Type |
 | --- | --- |
-| url | <code>string</code> |
-| attachmentId | <code>number</code> |
+| url | <code>string</code> | 
+| attachmentId | <code>number</code> | 
 
 <a name="State"></a>
 
 ## State : <code>Object</code>
-**Kind**: global typedef
+**Kind**: global typedef  
 **Properties**
 
 | Name | Type |
 | --- | --- |
-| senderId | <code>string</code> |
-| pageId | <code>string</code> |
-| state | <code>Object</code> |
+| senderId | <code>string</code> | 
+| pageId | <code>string</code> | 
+| state | <code>Object</code> | 
 
 <a name="Token"></a>
 
 ## Token : <code>Object</code>
-**Kind**: global typedef
+**Kind**: global typedef  
 **Properties**
 
 | Name | Type |
 | --- | --- |
-| senderId | <code>string</code> |
-| pageId | <code>string</code> |
-| token | <code>string</code> |
+| senderId | <code>string</code> | 
+| pageId | <code>string</code> | 
+| token | <code>string</code> | 
 

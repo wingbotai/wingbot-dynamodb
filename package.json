@@ -1,6 +1,6 @@
 {
   "name": "wingbot-dynamodb",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "description": "DynamoDB storage for wingbot",
   "main": "src/main.js",
   "scripts": {
@@ -45,9 +45,11 @@
     "eslint-plugin-react": "^7.11.1",
     "jsdoc-to-markdown": "^4.0.1",
     "mocha": "^5.2.0",
-    "nyc": "^13.0.1"
+    "nyc": "^13.0.1",
+    "wingbot": "^2.0.0-alpha.11"
   },
   "peerDependencies": {
-    "aws-sdk": "^2.224.1"
+    "aws-sdk": "^2.224.1",
+    "wingbot": "^2.0.0"
   }
 }
