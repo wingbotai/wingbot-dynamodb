@@ -262,7 +262,7 @@ DynamoDB Chat Log storage
 
 * [ChatLogStorage](#ChatLogStorage)
     * [new ChatLogStorage([tableName], [dynamoDbService], [log])](#new_ChatLogStorage_new)
-    * [.log(userId, responses, request)](#ChatLogStorage+log)
+    * [.log(userId, responses, request)](#ChatLogStorage+log) ⇒ <code>Promise</code>
 
 <a name="new_ChatLogStorage_new"></a>
 
@@ -276,7 +276,7 @@ DynamoDB Chat Log storage
 
 <a name="ChatLogStorage+log"></a>
 
-### chatLogStorage.log(userId, responses, request)
+### chatLogStorage.log(userId, responses, request) ⇒ <code>Promise</code>
 Log single event
 
 **Kind**: instance method of [<code>ChatLogStorage</code>](#ChatLogStorage)  
