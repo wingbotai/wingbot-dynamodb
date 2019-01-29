@@ -43,6 +43,7 @@ class ChatLogStorage {
      * @param {string} userId
      * @param {Object[]} responses - list of sent responses
      * @param {Object} request - event request
+     * @returns {Promise}
      */
     log (userId, responses = [], request = {}) {
         const log = {
@@ -74,6 +75,7 @@ class ChatLogStorage {
      * @param {string} userId
      * @param {Object[]} [responses] - list of sent responses
      * @param {Object} [request] - event request
+     * @returns {Promise}
      */
     error (err, userId, responses = [], request = {}) {
         const log = {
@@ -84,7 +86,7 @@ class ChatLogStorage {
             err: `${err}`
         };
 
-        this._documentClient.put({
+        return this._documentClient.put({
             TableName: this._tableName,
             Item: log
         }).promise()
