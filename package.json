@@ -8,7 +8,7 @@
     "test:unit": "mocha ./test/**/*.test.js",
     "test:unit:watch": "npm run test:unit -- --watch",
     "test:coverage": "nyc --reporter=html mocha ./test && nyc report",
-    "test:coverage:threshold": "nyc check-coverage --lines 80 --functions 80 --branches 69",
+    "test:coverage:threshold": "nyc check-coverage --lines 80 --functions 80 --branches 68",
     "test:lint": "eslint ./src/**/*.js ./bin/**/*.js ./test/**/*.js ",
     "doc": "node ./bin/makeApiDoc.js"
   },
