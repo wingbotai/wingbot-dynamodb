@@ -8,21 +8,26 @@ const {
 } = require('@aws-sdk/client-dynamodb');
 const localDynamo = require('local-dynamo');
 
-const process = localDynamo.launch({
-    stdio: 'inherit',
-    port: 45678,
-    sharedDb: true,
-    heap: '512m'
-});
+const port = parseInt(process.env.DYNAMO_PORT || '45678', 10);
+let ready = Promise.resolve();
 
-const ready = new Promise((r) => { setTimeout(r, 7000); });
+if (!process.env.DYNAMO_PORT) {
+    const proc = localDynamo.launch({
+        stdio: 'inherit',
+        port,
+        sharedDb: true,
+        heap: '512m'
+    });
 
-after(() => {
-    process.kill();
-});
+    after(() => {
+        proc.kill();
+    });
+}
+
+ready = new Promise((r) => { setTimeout(r, 7000); });
 
 const dbConfig = {
-    endpoint: 'http://localhost:45678',
+    endpoint: `http://localhost:${port}`,
     region: 'eu-west-1',
     credentials: {
         accessKeyId: '1',
