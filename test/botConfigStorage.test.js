@@ -8,15 +8,15 @@ const BotConfigStorage = require('../src/BotConfigStorage');
 const {
     createTableIfNotExists,
     dropTable,
-    db
+    dbConfig
 } = require('./utils');
 
 const TABLE_NAME = 'test-botconfig';
 
-
 describe('<BotConfigStorage>', function () {
 
-    before(async () => {
+    before(async function () {
+        this.timeout(8000);
         await createTableIfNotExists({
             TableName: TABLE_NAME,
             AttributeDefinitions: [
@@ -43,7 +43,7 @@ describe('<BotConfigStorage>', function () {
     });
 
     it('has api', async () => {
-        const botConfigStorage = new BotConfigStorage(TABLE_NAME, db);
+        const botConfigStorage = new BotConfigStorage(TABLE_NAME, dbConfig);
 
         const api = botConfigStorage.api();
 
@@ -61,7 +61,7 @@ describe('<BotConfigStorage>', function () {
     it('should be able to store and fetch, invalidate and update config under same timestamp', async () => {
         const cfgObj = { blocks: 123 };
 
-        const botConfigStorage = new BotConfigStorage(TABLE_NAME, db);
+        const botConfigStorage = new BotConfigStorage(TABLE_NAME, dbConfig);
 
         // save config
         const savedConfig = await botConfigStorage.updateConfig(cfgObj);

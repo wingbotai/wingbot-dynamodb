@@ -8,7 +8,7 @@ const BotTokenStorage = require('../src/BotTokenStorage');
 const {
     createTableIfNotExists,
     dropTable,
-    db
+    dbConfig
 } = require('./utils');
 
 const TABLE_NAME = 'test-bottokens';
@@ -18,10 +18,10 @@ const SENDER_ID = 'hello';
 const SENDER_ID2 = 'hello2';
 const PAGE_ID = 'page';
 
-
 describe('<BotTokenStorage>', function () {
 
-    before(async () => {
+    before(async function () {
+        this.timeout(8000);
         await createTableIfNotExists({
             TableName: TABLE_NAME,
             AttributeDefinitions: [
@@ -80,7 +80,7 @@ describe('<BotTokenStorage>', function () {
     describe('#getOrCreateToken()', () => {
 
         it('creates token', async () => {
-            const bts = new BotTokenStorage(TABLE_NAME, INDEX_NAME, db);
+            const bts = new BotTokenStorage(TABLE_NAME, INDEX_NAME, dbConfig);
 
             let token = await bts.getOrCreateToken(SENDER_ID, PAGE_ID, () => Promise.resolve('randomToken'));
 
@@ -100,14 +100,14 @@ describe('<BotTokenStorage>', function () {
         });
 
         it('avoids collisions', async () => {
-            const bts = new BotTokenStorage(TABLE_NAME, INDEX_NAME, db);
+            const bts = new BotTokenStorage(TABLE_NAME, INDEX_NAME, dbConfig);
 
             const tokens = await Promise.all([
                 bts.getOrCreateToken('a', PAGE_ID, () => Promise.resolve('fake')),
                 bts.getOrCreateToken('a', PAGE_ID, () => Promise.resolve('another'))
             ]);
 
-            assert.ok(tokens.every(t => t.senderId === 'a'
+            assert.ok(tokens.every((t) => t.senderId === 'a'
                 && (t.token === 'fake' || t.token === 'another')));
         });
 
@@ -116,7 +116,7 @@ describe('<BotTokenStorage>', function () {
     describe('#findByToken()', () => {
 
         it('is able to find token', async () => {
-            const bts = new BotTokenStorage(TABLE_NAME, INDEX_NAME, db);
+            const bts = new BotTokenStorage(TABLE_NAME, INDEX_NAME, dbConfig);
 
             let token = await bts.findByToken('nonexisting');
 
@@ -134,7 +134,7 @@ describe('<BotTokenStorage>', function () {
         });
 
         it('no token returns null response', async () => {
-            const bts = new BotTokenStorage();
+            const bts = new BotTokenStorage('xxx', 'index', dbConfig);
 
             const token = await bts.findByToken('');
 

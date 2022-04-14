@@ -1,14 +1,14 @@
 {
   "name": "wingbot-dynamodb",
-  "version": "2.5.0",
+  "version": "3.0.0",
   "description": "DynamoDB storage for wingbot",
   "main": "src/main.js",
   "scripts": {
     "test": "npm run test:lint && npm run test:coverage && npm run test:coverage:threshold",
     "test:unit": "mocha ./test/**/*.test.js",
     "test:unit:watch": "npm run test:unit -- --watch",
-    "test:coverage": "nyc --reporter=html mocha --opts ./test/mocha.opts ./test && nyc report",
-    "test:coverage:threshold": "nyc check-coverage --lines 80 --functions 80 --branches 75",
+    "test:coverage": "nyc --reporter=html mocha ./test && nyc report",
+    "test:coverage:threshold": "nyc check-coverage --lines 80 --functions 80 --branches 69",
     "test:lint": "eslint ./src/**/*.js ./bin/**/*.js ./test/**/*.js ",
     "doc": "node ./bin/makeApiDoc.js"
   },
@@ -26,30 +26,31 @@
   "author": "wingbot.ai",
   "license": "MIT",
   "engines": {
-    "node": "^8.0.0"
+    "node": ">=12.0.0"
   },
   "bugs": {
     "url": "https://github.com/wingbotai/wingbot-dynamodb/issues"
   },
   "homepage": "https://github.com/wingbotai/wingbot-dynamodb#readme",
   "devDependencies": {
-    "aws-sdk": "^2.330.0",
-    "chai": "^4.2.0",
-    "eslint": "^5.12.1",
-    "eslint-config-airbnb": "^17.1.0",
-    "eslint-mocha": "^0.5.0",
-    "eslint-plugin-import": "^2.16.0",
-    "eslint-plugin-jsdoc": "^4.1.0",
-    "eslint-plugin-jsx-a11y": "^6.2.0",
-    "eslint-plugin-mocha": "^5.2.1",
-    "eslint-plugin-react": "^7.12.4",
-    "jsdoc-to-markdown": "^4.0.1",
-    "mocha": "^5.2.0",
-    "nyc": "^13.1.0",
-    "wingbot": "^2.5.0"
+    "@aws-sdk/client-dynamodb": "^3.67.0",
+    "@aws-sdk/util-dynamodb": "^3.67.0",
+    "eslint": "^8.13.0",
+    "eslint-config-airbnb": "^19.0.4",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-jsdoc": "^39.2.1",
+    "eslint-plugin-jsx-a11y": "^6.5.1",
+    "eslint-plugin-mocha": "^10.0.4",
+    "eslint-plugin-react": "^7.29.4",
+    "jsdoc-to-markdown": "^7.1.1",
+    "local-dynamo": "^0.6.0",
+    "mocha": "^9.2.2",
+    "nyc": "^15.1.0",
+    "wingbot": "^3.30.2"
   },
   "peerDependencies": {
-    "aws-sdk": "^2.224.1",
-    "wingbot": "^2.5.0"
+    "@aws-sdk/client-dynamodb": "^3.0.0",
+    "@aws-sdk/util-dynamodb": "^3.0.0",
+    "wingbot": "^3.0.0"
   }
 }

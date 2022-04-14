@@ -8,7 +8,7 @@ const StateStorage = require('../src/StateStorage');
 const {
     createTableIfNotExists,
     dropTable,
-    db
+    dbConfig
 } = require('./utils');
 
 const TABLE_NAME = 'test-states';
@@ -16,10 +16,10 @@ const SENDER_ID = 'hello';
 const SENDER_ID2 = 'hello2';
 const PAGE_ID = 'page_id';
 
-
 describe('<StateStorage>', function () {
 
-    before(async () => {
+    before(async function () {
+        this.timeout(8000);
         await createTableIfNotExists({
             TableName: TABLE_NAME,
             AttributeDefinitions: [
@@ -56,14 +56,14 @@ describe('<StateStorage>', function () {
     describe('#getOrCreateAndLock()', () => {
 
         it('creates state and locks it', async () => {
-            const ss = new StateStorage(TABLE_NAME, db);
+            const ss = new StateStorage(TABLE_NAME, dbConfig);
 
-            await ss.getOrCreateAndLock(SENDER_ID, PAGE_ID, {}, 100);
+            await ss.getOrCreateAndLock(SENDER_ID, PAGE_ID, {}, 500);
 
             let thrownError = null;
 
             try {
-                await ss.getOrCreateAndLock(SENDER_ID, PAGE_ID, {}, 100);
+                await ss.getOrCreateAndLock(SENDER_ID, PAGE_ID, {}, 500);
             } catch (e) {
                 thrownError = e;
             }
@@ -77,7 +77,7 @@ describe('<StateStorage>', function () {
     describe('#getState()', () => {
 
         it('returns zero state', async () => {
-            const ss = new StateStorage(TABLE_NAME, db);
+            const ss = new StateStorage(TABLE_NAME, dbConfig);
 
             const nonexisting = await ss.getState('nonexisting', 'random');
 
@@ -98,14 +98,17 @@ describe('<StateStorage>', function () {
     describe('#saveState()', () => {
 
         it('is able to recover state from db and encodes dates', async () => {
-            const ss = new StateStorage(TABLE_NAME, db);
+            const ss = new StateStorage(TABLE_NAME, dbConfig);
+
+            const now = new Date();
 
             const state = {
-                dateTest: new Date(),
+                dateTest: now,
+                foo: 'bar',
                 listTest: [
                     { d: 1 },
                     { d: 2 },
-                    { d: new Date() }
+                    { d: now }
                 ]
             };
 
@@ -113,12 +116,21 @@ describe('<StateStorage>', function () {
                 senderId: SENDER_ID2,
                 pageId: PAGE_ID,
                 state,
-                lock: 0
+                lock: 0,
+                some: 123
             });
 
             const savedState = await ss.getOrCreateAndLock(SENDER_ID2, PAGE_ID, {}, 100);
 
-            assert.deepStrictEqual(savedState.state, state);
+            assert.deepStrictEqual(savedState.state, {
+                dateTest: now,
+                foo: 'bar',
+                listTest: [
+                    { d: 1 },
+                    { d: 2 },
+                    { d: now }
+                ]
+            });
         });
 
     });

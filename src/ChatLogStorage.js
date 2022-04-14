@@ -3,8 +3,12 @@
  */
 'use strict';
 
-const AWS = require('aws-sdk');
+const {
+    DynamoDBClient, PutItemCommand
+} = require('@aws-sdk/client-dynamodb');
+const { marshall } = require('@aws-sdk/util-dynamodb');
 
+/** @typedef {import('@aws-sdk/client-dynamodb').DynamoDBClientConfig} DynamoDBClientConfig */
 
 /**
  * DynamoDB Chat Log storage
@@ -13,21 +17,11 @@ class ChatLogStorage {
 
     /**
      * @param {string} [tableName]
-     * @param {AWS.DynamoDB} [dynamoDbService] - preconfigured dynamodb service
+     * @param {DynamoDBClientConfig} [clientConfig] - preconfigured dynamodb service
      * @param {{error:Function}} [log] - console like logger
      */
-    constructor (tableName = 'chatlog', dynamoDbService = null, log = console) {
-        const clientConfig = {
-            convertEmptyValues: true
-        };
-
-        if (dynamoDbService) {
-            Object.assign(clientConfig, {
-                service: dynamoDbService
-            });
-        }
-
-        this._documentClient = new AWS.DynamoDB.DocumentClient(clientConfig);
+    constructor (tableName = 'chatlog', clientConfig = null, log = console) {
+        this._documentClient = new DynamoDBClient(clientConfig);
 
         this._tableName = tableName;
 
@@ -36,16 +30,15 @@ class ChatLogStorage {
         this.muteErrors = true;
     }
 
-
     /**
      * Log single event
      *
      * @param {string} userId
-     * @param {Object[]} responses - list of sent responses
-     * @param {Object} request - event request
+     * @param {object[]} responses - list of sent responses
+     * @param {object} request - event request
      * @returns {Promise}
      */
-    log (userId, responses = [], request = {}) {
+    async log (userId, responses = [], request = {}) {
         const log = {
             userId,
             time: new Date(request.timestamp || Date.now()).toISOString(),
@@ -53,17 +46,20 @@ class ChatLogStorage {
             responses
         };
 
-        return this._documentClient.put({
+        const put = new PutItemCommand({
             TableName: this._tableName,
-            Item: log
-        }).promise()
-            .catch((err) => {
-                this._log.error('Failed to store chat log', err, log);
+            Item: marshall(log)
+        });
 
-                if (!this.muteErrors) {
-                    throw err;
-                }
-            });
+        try {
+            await this._documentClient.send(put);
+        } catch (err) {
+            this._log.error('Failed to store chat log', err, log);
+
+            if (!this.muteErrors) {
+                throw err;
+            }
+        }
     }
 
     /**
@@ -73,11 +69,11 @@ class ChatLogStorage {
      * @name ChatLog#error
      * @param {any} err - error
      * @param {string} userId
-     * @param {Object[]} [responses] - list of sent responses
-     * @param {Object} [request] - event request
+     * @param {object[]} [responses] - list of sent responses
+     * @param {object} [request] - event request
      * @returns {Promise}
      */
-    error (err, userId, responses = [], request = {}) {
+    async error (err, userId, responses = [], request = {}) {
         const log = {
             userId,
             time: new Date(request.timestamp || Date.now()).toISOString(),
@@ -86,17 +82,20 @@ class ChatLogStorage {
             err: `${err}`
         };
 
-        return this._documentClient.put({
+        const put = new PutItemCommand({
             TableName: this._tableName,
-            Item: log
-        }).promise()
-            .catch((storeError) => {
-                this._log.error('Failed to store chat log', storeError, log);
+            Item: marshall(log)
+        });
 
-                if (!this.muteErrors) {
-                    throw storeError;
-                }
-            });
+        try {
+            await this._documentClient.send(put);
+        } catch (e) {
+            this._log.error('Failed to store chat log', e, log);
+
+            if (!this.muteErrors) {
+                throw e;
+            }
+        }
     }
 
 }

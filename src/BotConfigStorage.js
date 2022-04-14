@@ -3,8 +3,13 @@
  */
 'use strict';
 
-const AWS = require('aws-sdk');
+const {
+    DynamoDBClient, GetItemCommand, PutItemCommand, DeleteItemCommand
+} = require('@aws-sdk/client-dynamodb');
+const { marshall, unmarshall } = require('@aws-sdk/util-dynamodb');
 const { apiAuthorizer } = require('wingbot');
+
+/** @typedef {import('@aws-sdk/client-dynamodb').DynamoDBClientConfig} DynamoDBClientConfig */
 
 const CONFIG_ID = 'config';
 
@@ -17,24 +22,13 @@ class BotConfigStorage {
 
     /**
      * @param {string} [tableName] - the table name
-     * @param {AWS.DynamoDB} [dynamoDbService] - preconfigured dynamodb service
+     * @param {DynamoDBClientConfig} [clientConfig] - preconfigured dynamodb service
      */
-    constructor (tableName = 'wingbot-config', dynamoDbService = null) {
-        const clientConfig = {
-            convertEmptyValues: true
-        };
-
-        if (dynamoDbService) {
-            Object.assign(clientConfig, {
-                service: dynamoDbService
-            });
-        }
-
-        this._documentClient = new AWS.DynamoDB.DocumentClient(clientConfig);
+    constructor (tableName = 'wingbot-config', clientConfig = null) {
+        this._documentClient = new DynamoDBClient(clientConfig);
 
         this._tableName = tableName;
     }
-
 
     /**
      * Returns botUpdate API for wingbot
@@ -43,7 +37,7 @@ class BotConfigStorage {
      * @param {Function|string[]} [acl] - acl configuration
      * @returns {{updateBot:Function}}
      */
-    api (onUpdate = () => Promise.resolve(), acl) {
+    api (onUpdate = () => Promise.resolve(), acl = []) {
         const storage = this;
         return {
             async updateBot (args, ctx) {
@@ -62,62 +56,92 @@ class BotConfigStorage {
      *
      * @returns {Promise}
      */
-    invalidateConfig () {
-        return this._documentClient.delete({
+    async invalidateConfig () {
+        const del = new DeleteItemCommand({
             TableName: this._tableName,
             Key: {
-                k: CONFIG_ID
+                k: { S: CONFIG_ID }
             }
-        }).promise();
+        });
+
+        await this._documentClient.send(del);
     }
 
     /**
      * @returns {Promise<number>}
      */
     async getConfigTimestamp () {
-        const data = await this._documentClient.get({
+        const get = new GetItemCommand({
             TableName: this._tableName,
             Key: {
-                k: CONFIG_ID
+                k: { S: CONFIG_ID }
             },
             ExpressionAttributeNames: {
                 '#timestamp': 'timestamp'
             },
             ProjectionExpression: '#timestamp'
-        }).promise();
+        });
+        const data = await this._documentClient.send(get);
 
-        return data.Item ? data.Item.timestamp : 0;
+        return (data.Item && parseInt(data.Item.timestamp.N, 10)) || 0;
     }
 
     /**
      * @template T
      * @param {T} newConfig
+     * @param {string} [id]
      * @returns {Promise<T>}
      */
-    async updateConfig (newConfig) {
-        Object.assign(newConfig, { timestamp: Date.now(), k: CONFIG_ID });
-        const store = Object.assign({}, newConfig);
+    async updateConfig (newConfig, id = CONFIG_ID) {
+        Object.assign(newConfig, { timestamp: Date.now() });
 
-        await this._documentClient.put({
-            TableName: this._tableName,
-            Item: store
-        }).promise();
+        await this.setConfig(id, newConfig);
 
         return newConfig;
     }
 
     /**
-     * @returns {Promise<Object|null>}
+     *
+     * @param {string} id
+     * @param {object} newConfig
      */
-    async getConfig () {
-        const data = await this._documentClient.get({
+    async setConfig (id, newConfig) {
+        const putCommand = new PutItemCommand({
+            TableName: this._tableName,
+            Item: marshall({
+                k: `${id}`,
+                ...newConfig
+            })
+        });
+
+        await this._documentClient.send(putCommand);
+
+        return newConfig;
+    }
+
+    /**
+     * @param {string} [id]
+     * @returns {Promise<object | null>}
+     */
+    async getConfig (id = CONFIG_ID) {
+        const get = new GetItemCommand({
             TableName: this._tableName,
             Key: {
-                k: CONFIG_ID
+                k: { S: `${id}` }
             }
-        }).promise();
+        });
 
-        return data.Item || null;
+        const data = await this._documentClient.send(get);
+
+        if (!data.Item) {
+            return null;
+        }
+
+        const item = unmarshall(data.Item);
+
+        delete item.k;
+
+        return item;
     }
 
 }

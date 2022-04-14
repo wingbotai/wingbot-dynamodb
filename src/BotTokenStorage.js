@@ -3,11 +3,16 @@
  */
 'use strict';
 
-const AWS = require('aws-sdk');
+const {
+    DynamoDBClient, GetItemCommand, PutItemCommand, QueryCommand
+} = require('@aws-sdk/client-dynamodb');
+const { marshall, unmarshall } = require('@aws-sdk/util-dynamodb');
 const tokenFactory = require('./tokenFactory');
 
+/** @typedef {import('@aws-sdk/client-dynamodb').DynamoDBClientConfig} DynamoDBClientConfig */
+
 /**
- * @typedef {Object} Token
+ * @typedef {object} Token
  * @prop {string} senderId
  * @prop {string} pageId
  * @prop {string} token
@@ -21,20 +26,10 @@ class BotTokenStorage {
     /**
      * @param {string} [tableName] - the table name
      * @param {string} [tokensIndexName] - index to query table by token
-     * @param {AWS.DynamoDB} [dynamoDbService] - preconfigured dynamodb service
+     * @param {DynamoDBClientConfig} [clientConfig] - preconfigured dynamodb service
      */
-    constructor (tableName = 'wingbot-tokens', tokensIndexName = 'token', dynamoDbService = null) {
-        const clientConfig = {
-            convertEmptyValues: true
-        };
-
-        if (dynamoDbService) {
-            Object.assign(clientConfig, {
-                service: dynamoDbService
-            });
-        }
-
-        this._documentClient = new AWS.DynamoDB.DocumentClient(clientConfig);
+    constructor (tableName = 'wingbot-tokens', tokensIndexName = 'token', clientConfig = null) {
+        this._documentClient = new DynamoDBClient(clientConfig);
 
         this._tableName = tableName;
 
@@ -46,11 +41,12 @@ class BotTokenStorage {
      * @param {string} token
      * @returns {Promise<Token|null>}
      */
-    findByToken (token) {
+    async findByToken (token) {
         if (!token) {
             return Promise.resolve(null);
         }
-        return this._documentClient.query({
+
+        const query = new QueryCommand({
             TableName: this._tableName,
             IndexName: this._tokensIndexName,
             KeyConditionExpression: '#token = :token',
@@ -58,18 +54,18 @@ class BotTokenStorage {
                 '#token': 'token'
             },
             ExpressionAttributeValues: {
-                ':token': token
+                ':token': { S: `${token}` }
             },
             Limit: 1
-        })
-            .promise()
-            .then((data) => {
-                if (data.Items.length === 0) {
-                    return null;
-                }
-                const { senderId, pageId } = data.Items[0];
-                return { senderId, token, pageId };
-            });
+        });
+
+        const data = await this._documentClient.send(query);
+
+        if (data.Items.length === 0) {
+            return null;
+        }
+        const { senderId, pageId } = unmarshall(data.Items[0]);
+        return { senderId, token, pageId };
     }
 
     /**
@@ -93,45 +89,44 @@ class BotTokenStorage {
      *
      * @param {string} senderId
      * @param {string} pageId
-     * @returns {Promise<{senderId:string,token:string}|null>}
+     * @returns {Promise<Token|null>}
      */
-    _getToken (senderId, pageId) {
-        return this._documentClient.get({
+    async _getToken (senderId, pageId) {
+        const get = new GetItemCommand({
             TableName: this._tableName,
-            Key: { senderId, pageId }
-        })
-            .promise()
-            .then((data) => {
-                if (!data.Item) {
-                    return null;
-                }
-                const { senderId: fetchedSenderId, token } = data.Item;
-                return { senderId: fetchedSenderId, token, pageId };
-            });
+            Key: { senderId: { S: senderId }, pageId: { S: pageId } }
+        });
+
+        const data = await this._documentClient.send(get);
+
+        if (!data.Item) {
+            return null;
+        }
+        const { senderId: fetchedSenderId, token } = unmarshall(data.Item);
+        return { senderId: fetchedSenderId, token, pageId };
     }
 
-    _createAndGetToken (senderId, pageId, createTokenFn) {
-        let tokenObject;
-        return Promise.resolve(createTokenFn())
-            .then((token) => {
-                tokenObject = { senderId, token, pageId };
+    async _createAndGetToken (senderId, pageId, createTokenFn) {
+        const token = await Promise.resolve(createTokenFn());
 
-                return this._documentClient.put({
-                    TableName: this._tableName,
-                    Item: tokenObject,
-                    ConditionExpression: 'attribute_not_exists(senderId)'
-                }).promise();
-            })
-            .then(
-                () => tokenObject,
-                () => this._getToken(senderId, pageId) // probably collision, try read it
-                    .then((token) => {
-                        if (!token) {
-                            throw new Error('Cant create token');
-                        }
-                        return token;
-                    })
-            );
+        const tokenObject = { senderId, token, pageId };
+
+        const put = new PutItemCommand({
+            TableName: this._tableName,
+            Item: marshall(tokenObject),
+            ConditionExpression: 'attribute_not_exists(senderId)'
+        });
+
+        try {
+            await this._documentClient.send(put);
+            return tokenObject;
+        } catch (e) {
+            const existing = await this._getToken(senderId, pageId);
+            if (!existing) {
+                throw new Error('Cant create token');
+            }
+            return existing;
+        }
     }
 
 }

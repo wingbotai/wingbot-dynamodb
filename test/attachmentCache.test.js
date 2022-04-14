@@ -8,16 +8,16 @@ const AttachmentCache = require('../src/AttachmentCache');
 const {
     createTableIfNotExists,
     dropTable,
-    db
+    dbConfig
 } = require('./utils');
 
 const TABLE_NAME = 'test-attachment-storage';
 const TEST_URL = 'abc';
 
-
 describe('<AttachmentCache>', function () {
 
-    before(async () => {
+    before(async function () {
+        this.timeout(8000);
         await createTableIfNotExists({
             TableName: TABLE_NAME,
             AttributeDefinitions: [
@@ -45,7 +45,7 @@ describe('<AttachmentCache>', function () {
 
     it('should be able to store and fetch the cached item', async () => {
 
-        const attachmentCache = new AttachmentCache(TABLE_NAME, db);
+        const attachmentCache = new AttachmentCache(TABLE_NAME, dbConfig);
 
         const nothing = await attachmentCache.findAttachmentByUrl(TEST_URL);
 
@@ -57,12 +57,6 @@ describe('<AttachmentCache>', function () {
         const something = await attachmentCache.findAttachmentByUrl(TEST_URL);
 
         assert.strictEqual(something, 1);
-    });
-
-    it('should be able to use default table name', () => {
-        const cache = new AttachmentCache();
-
-        assert.strictEqual(cache._tableName, 'wingbot-attachment-cache');
     });
 
 });

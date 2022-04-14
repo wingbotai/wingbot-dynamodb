@@ -3,7 +3,12 @@
  */
 'use strict';
 
-const AWS = require('aws-sdk');
+const {
+    DynamoDBClient, GetItemCommand, PutItemCommand
+} = require('@aws-sdk/client-dynamodb');
+const { marshall, unmarshall } = require('@aws-sdk/util-dynamodb');
+
+/** @typedef {import('@aws-sdk/client-dynamodb').DynamoDBClientConfig} DynamoDBClientConfig */
 
 /**
  * Storage for Facebook attachment ids
@@ -12,20 +17,10 @@ class AttachmentCache {
 
     /**
      * @param {string} [tableName] - the table name
-     * @param {AWS.DynamoDB} [dynamoDbService] - preconfigured dynamodb service
+     * @param {DynamoDBClientConfig} [clientConfig] - preconfigured dynamodb service
      */
-    constructor (tableName = 'wingbot-attachment-cache', dynamoDbService = null) {
-        const clientConfig = {
-            convertEmptyValues: true
-        };
-
-        if (dynamoDbService) {
-            Object.assign(clientConfig, {
-                service: dynamoDbService
-            });
-        }
-
-        this._documentClient = new AWS.DynamoDB.DocumentClient(clientConfig);
+    constructor (tableName = 'wingbot-attachment-cache', clientConfig = null) {
+        this._documentClient = new DynamoDBClient(clientConfig);
 
         this._tableName = tableName;
     }
@@ -35,19 +30,21 @@ class AttachmentCache {
      * @param {string} url
      * @returns {Promise<number|null>}
      */
-    findAttachmentByUrl (url) {
-        return this._documentClient.get({
+    async findAttachmentByUrl (url) {
+        const get = new GetItemCommand({
             TableName: this._tableName,
-            Key: { url }
-        })
-            .promise()
-            .then((data) => {
-                if (!data.Item) {
-                    return null;
-                }
+            Key: { url: { S: url } }
+        });
 
-                return data.Item.attachmentId;
-            });
+        const data = await this._documentClient.send(get);
+
+        if (!data.Item) {
+            return null;
+        }
+
+        const item = unmarshall(data.Item);
+
+        return item.attachmentId;
     }
 
     /**
@@ -56,11 +53,13 @@ class AttachmentCache {
      * @param {number} attachmentId
      * @returns {Promise}
      */
-    saveAttachmentId (url, attachmentId) {
-        return this._documentClient.put({
+    async saveAttachmentId (url, attachmentId) {
+        const put = new PutItemCommand({
             TableName: this._tableName,
-            Item: { url, attachmentId }
-        }).promise();
+            Item: marshall({ url, attachmentId })
+        });
+
+        await this._documentClient.send(put);
     }
 
 }
