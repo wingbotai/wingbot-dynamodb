@@ -10,19 +10,19 @@ const localDynamo = require('local-dynamo');
 
 const process = localDynamo.launch({
     stdio: 'inherit',
-    port: 4567,
+    port: 45678,
     sharedDb: true,
     heap: '512m'
 });
 
-const ready = new Promise((r) => { setTimeout(r, 5000); });
+const ready = new Promise((r) => { setTimeout(r, 7000); });
 
 after(() => {
     process.kill();
 });
 
 const dbConfig = {
-    endpoint: 'http://localhost:4567',
+    endpoint: 'http://localhost:45678',
     region: 'eu-west-1',
     credentials: {
         accessKeyId: '1',
