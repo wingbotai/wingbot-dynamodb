@@ -23,7 +23,11 @@ after(() => {
 
 const dbConfig = {
     endpoint: 'http://localhost:4567',
-    region: 'eu-west-1'
+    region: 'eu-west-1',
+    credentials: {
+        accessKeyId: '1',
+        secretAccessKey: '2'
+    }
 };
 
 const db = new DynamoDBClient(dbConfig);
