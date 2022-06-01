@@ -3,6 +3,7 @@
  */
 'use strict';
 
+const { strict: assert } = require('assert');
 const ChatLogStorage = require('../src/ChatLogStorage');
 const {
     createTableIfNotExists,
@@ -11,9 +12,13 @@ const {
 } = require('./utils');
 
 const TABLE_NAME = 'test-chatlogs';
-const SENDER_ID = 'hello';
 
 describe('<ChatLogStorage>', function () {
+
+    const SENDER_ID = `hello${Date.now()}`;
+
+    /** @type {ChatLogStorage} */
+    let chl;
 
     before(async function () {
         this.timeout(8000);
@@ -25,8 +30,8 @@ describe('<ChatLogStorage>', function () {
                     AttributeType: 'S'
                 },
                 {
-                    AttributeName: 'time',
-                    AttributeType: 'S'
+                    AttributeName: 'timestamp',
+                    AttributeType: 'N'
                 }
             ],
             KeySchema: [
@@ -35,7 +40,7 @@ describe('<ChatLogStorage>', function () {
                     KeyType: 'HASH'
                 },
                 {
-                    AttributeName: 'time',
+                    AttributeName: 'timestamp',
                     KeyType: 'RANGE'
                 }
             ],
@@ -46,6 +51,10 @@ describe('<ChatLogStorage>', function () {
         });
     });
 
+    beforeEach(() => {
+        chl = new ChatLogStorage(TABLE_NAME, dbConfig);
+    });
+
     after(async () => {
         await dropTable(TABLE_NAME);
     });
@@ -53,16 +62,109 @@ describe('<ChatLogStorage>', function () {
     describe('#log()', () => {
 
         it('stores data without error', async () => {
-            const chl = new ChatLogStorage(TABLE_NAME, dbConfig);
             chl.muteErrors = false;
 
             await chl.log(SENDER_ID, [{ response: 1 }], { req: 1 });
         });
 
         it('mutes errors', async () => {
-            const chl = new ChatLogStorage(`random-${Math.random().toString().substr(2)}`, dbConfig);
-
             await chl.log(SENDER_ID);
+        });
+
+    });
+
+    describe('#getInteractions()', () => {
+
+        it('should return stored interactions', async () => {
+            const timestamp = Date.now();
+            const firstTs = timestamp - 1001;
+            await chl.log('abc', [{ response: 1 }], { req: 1 }, { pageId: '2', timestamp: firstTs });
+            await chl.log('abc', [{ response: 2 }], { req: 2 }, { pageId: '2', timestamp });
+
+            let data = await chl.getInteractions('abc', '2', 2);
+
+            assert.deepEqual(data, [
+                {
+                    pageId: '2',
+                    request: {
+                        req: 1
+                    },
+                    responses: [
+                        {
+                            response: 1
+                        }
+                    ],
+                    senderId: 'abc',
+                    timestamp: firstTs,
+                    time: `${new Date(firstTs).toISOString()}`
+                },
+                {
+                    pageId: '2',
+                    request: {
+                        req: 2
+                    },
+                    responses: [
+                        {
+                            response: 2
+                        }
+                    ],
+                    senderId: 'abc',
+                    timestamp,
+                    time: `${new Date(timestamp).toISOString()}`
+                }
+            ]);
+
+            data = await chl.getInteractions('abc', '2', 1, firstTs);
+
+            assert.deepEqual(data, [
+                {
+                    pageId: '2',
+                    request: {
+                        req: 1
+                    },
+                    responses: [
+                        {
+                            response: 1
+                        }
+                    ],
+                    senderId: 'abc',
+                    timestamp: firstTs,
+                    time: `${new Date(firstTs).toISOString()}`
+                }
+            ]);
+
+            data = await chl.getInteractions('abc', '2', 2, null, firstTs);
+
+            assert.deepEqual(data, [
+                {
+                    pageId: '2',
+                    request: {
+                        req: 1
+                    },
+                    responses: [
+                        {
+                            response: 1
+                        }
+                    ],
+                    senderId: 'abc',
+                    timestamp: firstTs,
+                    time: `${new Date(firstTs).toISOString()}`
+                },
+                {
+                    pageId: '2',
+                    request: {
+                        req: 2
+                    },
+                    responses: [
+                        {
+                            response: 2
+                        }
+                    ],
+                    senderId: 'abc',
+                    timestamp,
+                    time: `${new Date(timestamp).toISOString()}`
+                }
+            ]);
         });
 
     });
@@ -70,15 +172,12 @@ describe('<ChatLogStorage>', function () {
     describe('#error()', () => {
 
         it('stores error without fail', async () => {
-            const chl = new ChatLogStorage(TABLE_NAME, dbConfig);
             chl.muteErrors = false;
 
             await chl.error(new Error('something failed'), SENDER_ID, [{ response: 1 }], { req: 1 });
         });
 
         it('mutes errors', async () => {
-            const chl = new ChatLogStorage(`random-${Math.random().toString().substr(2)}`, dbConfig);
-
             await chl.error(new Error('something failed'), SENDER_ID);
         });
 

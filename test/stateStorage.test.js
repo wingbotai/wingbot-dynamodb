@@ -30,16 +30,39 @@ describe('<StateStorage>', function () {
                 {
                     AttributeName: 'pageId',
                     AttributeType: 'S'
+                },
+                {
+                    AttributeName: 'lastInteraction',
+                    AttributeType: 'S'
                 }
             ],
             KeySchema: [
                 {
-                    AttributeName: 'senderId',
+                    AttributeName: 'pageId',
                     KeyType: 'HASH'
                 },
                 {
-                    AttributeName: 'pageId',
+                    AttributeName: 'senderId',
                     KeyType: 'RANGE'
+                }
+            ],
+            LocalSecondaryIndexes: [
+                {
+                    IndexName: 'lastInteraction',
+                    KeySchema: [
+                        {
+                            AttributeName: 'pageId',
+                            KeyType: 'HASH'
+                        },
+                        {
+                            AttributeName: 'lastInteraction',
+                            KeyType: 'RANGE'
+                        }
+                    ],
+                    Projection: {
+                        ProjectionType: 'INCLUDE',
+                        NonKeyAttributes: ['senderId']
+                    }
                 }
             ],
             ProvisionedThroughput: {
@@ -58,7 +81,7 @@ describe('<StateStorage>', function () {
         it('creates state and locks it', async () => {
             const ss = new StateStorage(TABLE_NAME, dbConfig);
 
-            await ss.getOrCreateAndLock(SENDER_ID, PAGE_ID, {}, 500);
+            const first = await ss.getOrCreateAndLock(SENDER_ID, PAGE_ID, {}, 500);
 
             let thrownError = null;
 
@@ -70,6 +93,8 @@ describe('<StateStorage>', function () {
 
             assert.ok(thrownError !== null);
             assert.strictEqual(thrownError.code, 11000);
+
+            await ss.saveState({ ...first });
         });
 
     });
@@ -131,6 +156,63 @@ describe('<StateStorage>', function () {
                     { d: now }
                 ]
             });
+
+            await ss.saveState({ ...savedState });
+        });
+
+    });
+
+    describe('#getStates()', () => {
+
+        /** @type {StateStorage} */
+        let storage;
+        const secondState = { x: 2 };
+        const firstState = { x: 1 };
+        const lastInteraction = new Date(Date.now() - 2000);
+        const lastInteraction2 = new Date(Date.now() - 1000);
+
+        beforeEach(async () => {
+            storage = new StateStorage(TABLE_NAME, dbConfig, PAGE_ID);
+
+            const first = await storage.getOrCreateAndLock(SENDER_ID, PAGE_ID, firstState);
+            const second = await storage.getOrCreateAndLock(SENDER_ID2, PAGE_ID, secondState);
+
+            await storage.saveState({ ...first, lastInteraction });
+            await storage.saveState({ ...second, lastInteraction: lastInteraction2 });
+        });
+
+        it('should return states by last interaction', async () => {
+            let { data, lastKey } = await storage.getStates({}, 1);
+
+            assert.deepEqual(data, [{
+                pageId: PAGE_ID,
+                senderId: SENDER_ID2,
+                lastInteraction: lastInteraction2
+            }]);
+
+            ({ data, lastKey } = await storage.getStates({}, 1, lastKey));
+
+            assert.deepEqual(data, [{
+                pageId: PAGE_ID,
+                senderId: SENDER_ID,
+                lastInteraction
+            }]);
+
+            assert.strictEqual(lastKey, null);
+        });
+
+        it('should be able to use search', async () => {
+            const { data, lastKey } = await storage.getStates({
+                search: SENDER_ID2
+            });
+
+            assert.deepEqual(data, [{
+                pageId: PAGE_ID,
+                senderId: SENDER_ID2,
+                lastInteraction: lastInteraction2
+            }]);
+
+            assert.strictEqual(lastKey, null);
         });
 
     });

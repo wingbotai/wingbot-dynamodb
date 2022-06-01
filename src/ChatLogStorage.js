@@ -4,9 +4,9 @@
 'use strict';
 
 const {
-    DynamoDBClient, PutItemCommand
+    DynamoDBClient, PutItemCommand, QueryCommand
 } = require('@aws-sdk/client-dynamodb');
-const { marshall } = require('@aws-sdk/util-dynamodb');
+const { marshall, unmarshall } = require('@aws-sdk/util-dynamodb');
 
 /** @typedef {import('@aws-sdk/client-dynamodb').DynamoDBClientConfig} DynamoDBClientConfig */
 
@@ -31,55 +31,94 @@ class ChatLogStorage {
     }
 
     /**
-     * Log single event
+     * Interate history
+     * all limits are inclusive
      *
-     * @param {string} userId
-     * @param {object[]} responses - list of sent responses
-     * @param {object} request - event request
-     * @returns {Promise}
+     * @param {string} senderId
+     * @param {string} pageId
+     * @param {number} [limit]
+     * @param {number} [endAt] - iterate backwards to history
+     * @param {number} [startAt] - iterate forward to last interaction
+     * @returns {Promise<object[]>}
      */
-    async log (userId, responses = [], request = {}) {
-        const log = {
-            userId,
-            time: new Date(request.timestamp || Date.now()).toISOString(),
-            request,
-            responses
-        };
+    async getInteractions (senderId, pageId, limit = 10, endAt = null, startAt = null) {
 
-        const put = new PutItemCommand({
+        const orderBackwards = startAt && !endAt;
+
+        const cmd = new QueryCommand({
             TableName: this._tableName,
-            Item: marshall(log)
+            KeyConditionExpression: 'userId = :userId',
+            ExpressionAttributeValues: {
+                ':userId': { S: `${pageId || '-'}|${senderId}` }
+            },
+            ScanIndexForward: !orderBackwards,
+            Limit: limit
         });
 
-        try {
-            await this._documentClient.send(put);
-        } catch (err) {
-            this._log.error('Failed to store chat log', err, log);
-
-            if (!this.muteErrors) {
-                throw err;
-            }
+        if (startAt || endAt) {
+            cmd.input.ExpressionAttributeNames = {
+                '#timestamp': 'timestamp'
+            };
         }
+
+        if (startAt) {
+            cmd.input.KeyConditionExpression += ' AND #timestamp >= :startAt';
+            Object.assign(cmd.input.ExpressionAttributeValues, {
+                ':startAt': { N: `${startAt}` }
+            });
+        }
+
+        if (endAt) {
+            cmd.input.KeyConditionExpression += ' AND #timestamp <= :endAt';
+            Object.assign(cmd.input.ExpressionAttributeValues, {
+                ':endAt': { N: `${endAt}` }
+            });
+        }
+
+        const res = await this._documentClient.send(cmd);
+
+        const data = res.Items.map((i) => {
+            const { userId, ...rest } = unmarshall(i);
+            return rest;
+        });
+
+        if (orderBackwards) {
+            data.reverse();
+        }
+
+        return data;
     }
 
     /**
      * Log single event
      *
-     * @method
-     * @name ChatLog#error
-     * @param {any} err - error
-     * @param {string} userId
-     * @param {object[]} [responses] - list of sent responses
-     * @param {object} [request] - event request
+     * @param {string} senderId
+     * @param {object[]} responses - list of sent responses
+     * @param {object} request - event request
+     * @param {object} [metadata] - request metadata
      * @returns {Promise}
      */
-    async error (err, userId, responses = [], request = {}) {
+    log (senderId, responses = [], request = {}, metadata = {}) {
         const log = {
-            userId,
-            time: new Date(request.timestamp || Date.now()).toISOString(),
+            senderId,
             request,
             responses,
-            err: `${err}`
+            ...metadata
+        };
+
+        return this._storeLog(log);
+    }
+
+    async _storeLog (event) {
+        const timestamp = event.timestamp || event.request.timestamp || Date.now();
+        const pageId = event.pageId || '-';
+
+        const log = {
+            ...event,
+            userId: `${pageId}|${event.senderId}`,
+            timestamp,
+            time: new Date(timestamp || Date.now()).toISOString(),
+            pageId
         };
 
         const put = new PutItemCommand({
@@ -96,6 +135,32 @@ class ChatLogStorage {
                 throw e;
             }
         }
+    }
+
+    /**
+     * Log single event
+     *
+     * @method
+     * @name ChatLog#error
+     * @param {any} err - error
+     * @param {string} senderId
+     * @param {object[]} [responses] - list of sent responses
+     * @param {object} [request] - event request
+     * @param {object} [metadata] - request metadata
+     * @returns {Promise}
+     */
+    error (err, senderId, responses = [], request = {}, metadata = {}) {
+        const log = {
+            senderId,
+            request,
+            responses,
+            err: `${err}`,
+            ...metadata
+        };
+
+        Object.assign(log, metadata);
+
+        return this._storeLog(log);
     }
 
 }
