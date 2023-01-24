@@ -28,6 +28,14 @@ class ChatLogStorage {
         this._log = log;
 
         this.muteErrors = true;
+
+        this.replaceApi = false;
+    }
+
+    _getPageId (pageId) {
+        return this.replaceApi
+            ? pageId.replace(/\.api$/, '')
+            : pageId;
     }
 
     /**
@@ -111,7 +119,7 @@ class ChatLogStorage {
 
     async _storeLog (event) {
         const timestamp = event.timestamp || event.request.timestamp || Date.now();
-        const pageId = event.pageId || '-';
+        const pageId = this._getPageId(event.pageId || '-');
 
         const log = {
             ...event,

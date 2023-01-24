@@ -41,6 +41,14 @@ class StateStorage {
         this._tableName = tableName;
 
         this._pageId = pageId;
+
+        this.replaceApi = false;
+    }
+
+    _getPageId (pageId) {
+        return this.replaceApi
+            ? pageId.replace(/\.api$/, '')
+            : pageId;
     }
 
     /**
@@ -52,7 +60,7 @@ class StateStorage {
     async getState (senderId, pageId) {
         const get = new GetItemCommand({
             TableName: this._tableName,
-            Key: { pageId: { S: pageId }, senderId: { S: senderId } }
+            Key: { pageId: { S: this._getPageId(pageId) }, senderId: { S: senderId } }
         });
 
         const data = await this._documentClient.send(get);
@@ -80,7 +88,7 @@ class StateStorage {
 
         const update = new UpdateItemCommand({
             TableName: this._tableName,
-            Key: { pageId: { S: pageId }, senderId: { S: senderId } },
+            Key: { pageId: { S: this._getPageId(pageId) }, senderId: { S: senderId } },
             ExpressionAttributeNames: {
                 '#LOCK': 'lock'
             },
