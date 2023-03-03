@@ -131,7 +131,7 @@ class StateStorage {
             lock: 0
         });
 
-        const stateToSave = marshall(deepEncode(state));
+        const stateToSave = marshall(deepEncode(state), { removeUndefinedValues: true });
 
         const put = new PutItemCommand({
             TableName: this._tableName,

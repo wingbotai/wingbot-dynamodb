@@ -131,7 +131,7 @@ class ChatLogStorage {
 
         const put = new PutItemCommand({
             TableName: this._tableName,
-            Item: marshall(log)
+            Item: marshall(log, { removeUndefinedValues: true })
         });
 
         try {
