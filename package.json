@@ -1,9 +1,10 @@
 {
   "name": "wingbot-dynamodb",
-  "version": "3.2.1",
+  "version": "3.3.1",
   "description": "DynamoDB storage for wingbot",
   "main": "src/main.js",
   "scripts": {
+    "postinstall": "node -e \"process.platform === 'darwin' && process.arch === 'arm64' && require('child_process').spawn('sh', ['./fixjava.sh'], { stdio: 'inherit'})\"",
     "test": "npm run test:lint && npm run test:coverage && npm run test:coverage:threshold",
     "test:unit": "mocha ./test/**/*.test.js",
     "test:unit:watch": "npm run test:unit -- --watch",
@@ -35,6 +36,7 @@
   "devDependencies": {
     "@aws-sdk/client-dynamodb": "^3.67.0",
     "@aws-sdk/util-dynamodb": "^3.67.0",
+    "@aws-sdk/lib-dynamodb": "^3.67.0",
     "eslint": "^8.13.0",
     "eslint-config-airbnb": "^19.0.4",
     "eslint-plugin-import": "^2.26.0",
@@ -52,5 +54,8 @@
     "@aws-sdk/client-dynamodb": "^3.0.0",
     "@aws-sdk/util-dynamodb": "^3.0.0",
     "wingbot": "^3.0.0"
+  },
+  "optionalDependencies": {
+    "@aws-sdk/lib-dynamodb": "^3.0.0"
   }
 }
