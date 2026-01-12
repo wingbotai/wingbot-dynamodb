@@ -77,7 +77,9 @@ describe('<ChatLogStorage>', function () {
 
         it('should return stored interactions', async () => {
             const timestamp = Date.now();
+            const zeroTs = timestamp - 2002;
             const firstTs = timestamp - 1001;
+            await chl.log('abc', [{ response: 0 }], { req: 0 }, { pageId: '2', timestamp: zeroTs });
             await chl.log('abc', [{ response: 1 }], { req: 1 }, { pageId: '2', timestamp: firstTs });
             await chl.log('abc', [{ response: 2 }], { req: 2 }, { pageId: '2', timestamp });
 

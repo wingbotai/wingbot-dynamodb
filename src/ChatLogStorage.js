@@ -11,6 +11,11 @@ const { marshall, unmarshall } = require('@aws-sdk/util-dynamodb');
 /** @typedef {import('@aws-sdk/client-dynamodb').DynamoDBClientConfig} DynamoDBClientConfig */
 
 /**
+ * @typedef {object} ChatLogOptions
+ * @prop {number} [expiresInSeconds]
+ */
+
+/**
  * DynamoDB Chat Log storage
  */
 class ChatLogStorage {
@@ -19,8 +24,9 @@ class ChatLogStorage {
      * @param {string} [tableName]
      * @param {DynamoDBClientConfig} [clientConfig] - preconfigured dynamodb service
      * @param {{error:Function}} [log] - console like logger
+     * @param {ChatLogOptions} [options={}]
      */
-    constructor (tableName = 'chatlog', clientConfig = null, log = console) {
+    constructor (tableName = 'chatlog', clientConfig = null, log = console, options = {}) {
         this._documentClient = new DynamoDBClient(clientConfig);
 
         this._tableName = tableName;
@@ -30,6 +36,8 @@ class ChatLogStorage {
         this.muteErrors = true;
 
         this.replaceApi = false;
+
+        this._options = options;
     }
 
     _getPageId (pageId) {
@@ -59,7 +67,7 @@ class ChatLogStorage {
             ExpressionAttributeValues: {
                 ':userId': { S: `${pageId || '-'}|${senderId}` }
             },
-            ScanIndexForward: !orderBackwards,
+            ScanIndexForward: !!orderBackwards,
             Limit: limit
         });
 
@@ -90,7 +98,7 @@ class ChatLogStorage {
             return rest;
         });
 
-        if (orderBackwards) {
+        if (!orderBackwards) {
             data.reverse();
         }
 
@@ -128,6 +136,13 @@ class ChatLogStorage {
             time: new Date(timestamp || Date.now()).toISOString(),
             pageId
         };
+
+        if (this._options.expiresInSeconds) {
+            // Calculate the expireAt time (90 days from now) in epoch second format
+            const ex = Math.floor((Date.now() / 1000) + this._options.expiresInSeconds);
+
+            Object.assign(log, { ex });
+        }
 
         const put = new PutItemCommand({
             TableName: this._tableName,
